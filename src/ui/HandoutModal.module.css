@@ -1,0 +1,378 @@
+/* ---------------------------------------------------------------------------
+   1. Container principal (wrapper do modal)
+   Card branco sólido destacado do mapa, com teto de tamanho e scroll no eixo Y.
+--------------------------------------------------------------------------- */
+.modal {
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+
+  background-color: #ffffff;
+  border-radius: 4px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+
+  /* `fit-content` faz o card abraçar o conteúdo em vez de esticar sempre até
+     600 px. Um token de ~260 px ganhava uma moldura branca enorme em volta —
+     e, pior, o iframe transparente em volta engolia cliques no mapa.
+     O `min-width` garante que o cabeçalho do mestre (Show to Players + Edit +
+     zoom + fechar) nunca fique espremido. */
+  width: fit-content;
+  /* Valor FIXO de propósito. Um `min(340px, 100%)` faria a largura do card
+     depender da largura do iframe — e é justamente o iframe que o
+     `ResizeObserver` redimensiona a partir do card. Dependência circular
+     oscila. Aqui dentro nós controlamos o container, então 340px é seguro. */
+  min-width: 340px;
+
+  /* Os tetos vêm por `style` inline, calculados a partir da tela REAL
+     (`OBR.viewport`). NUNCA use `vh`/`vw` aqui: dentro do popover essas
+     unidades medem o próprio iframe, e é o iframe que redimensionamos a partir
+     do card — o card encolhia, o teto encolhia junto, e a imagem nunca mais
+     cabia. Estes valores são só o fallback do primeiro quadro. */
+  max-width: 600px;
+  max-height: 760px;
+  margin: auto;
+
+  /* Scroll vertical quando a imagem é mais alta que o card. */
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  color: #1c1c1c;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 14px;
+}
+
+/* No modo zoom a imagem estoura a largura, então liberamos o eixo X também.
+   A LARGURA vem por `style` inline (o teto calculado da tela real). Um
+   `width: 100%` aqui mediria o iframe — e o iframe é definido a partir deste
+   card, então os dois cresciam 24 px a cada ciclo, sem parar. */
+.modal.zoomed {
+  overflow-x: auto;
+}
+
+/* Scrollbar fina, na lateral direita, sem quebrar o layout. */
+.modal {
+  scrollbar-width: thin;
+  scrollbar-color: #bdbdbd transparent;
+}
+.modal::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.modal::-webkit-scrollbar-thumb {
+  background-color: #bdbdbd;
+  border-radius: 4px;
+}
+.modal::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ---------------------------------------------------------------------------
+   2. Cabeçalho
+--------------------------------------------------------------------------- */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  padding: 8px 12px;
+  border-bottom: 1px solid #e0e0e0;
+
+  /* Fica preso no topo enquanto o corpo rola. */
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background-color: #ffffff;
+  flex: 0 0 auto;
+}
+
+/* Lado esquerdo: ícone + título */
+.identity {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0; /* deixa o título truncar em vez de empurrar as ações */
+}
+
+.icon {
+  flex: 0 0 auto;
+  color: #555555;
+}
+
+.title {
+  font-weight: bold;
+  font-size: 15px;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.titleInput {
+  font: inherit;
+  font-weight: bold;
+  font-size: 15px;
+  padding: 3px 6px;
+  border: 1px solid #cccccc;
+  border-radius: 3px;
+  background: #ffffff;
+  color: inherit;
+  min-width: 0;
+  width: 100%;
+}
+
+/* Lado direito: ações */
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+
+  font: inherit;
+  font-size: 13px;
+  line-height: 1;
+  color: #1c1c1c;
+
+  background-color: #f5f5f5;
+  border: 1px solid #cccccc;
+  border-radius: 3px;
+  padding: 5px 9px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.button:hover:not(:disabled) {
+  background-color: #eaeaea;
+}
+
+.button:active:not(:disabled) {
+  background-color: #e0e0e0;
+}
+
+.button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* Botão quadrado só com ícone (lupa). */
+.iconButton {
+  padding: 5px;
+  width: 28px;
+  height: 28px;
+  justify-content: center;
+}
+
+.iconButton.active {
+  background-color: #dcdcdc;
+  border-color: #a8a8a8;
+}
+
+/* Botão fechar, separado visualmente dos demais. */
+.closeButton {
+  margin-left: 6px;
+  padding: 4px;
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  background: none;
+  border: none;
+  border-radius: 3px;
+  color: #666666;
+  cursor: pointer;
+}
+
+.closeButton:hover {
+  background-color: #ececec;
+  color: #1c1c1c;
+}
+
+/* ---------------------------------------------------------------------------
+   3. Corpo
+--------------------------------------------------------------------------- */
+/* `flex: 0 0 auto` é essencial aqui.
+   O `.modal` é um flex column com altura máxima. Com o padrão
+   (`flex: 0 1 auto`) o flexbox COMPRIME os filhos quando o conteúdo passa da
+   altura máxima, e o conteúdo vaza por cima do irmão de baixo. Num container
+   que rola, os filhos ficam no tamanho natural e quem rola é o container. */
+.body {
+  padding: 0;
+  margin: 0;
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: center;
+  background-color: #ffffff;
+}
+
+/* `max-width` em vez de `width`: a imagem encolhe para caber, mas NUNCA é
+   ampliada além do tamanho natural. Tokens do Owlbear são pequenos (256 px é
+   comum) — esticá-los até os 600 px do modal os deixa borrados. */
+.image {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto;
+}
+
+/* Zoom: ampliar deliberadamente.
+   `min-width: 100%` faz uma imagem pequena (um token) esticar até a largura do
+   modal, aceitando o borrão porque agora foi você que pediu. Uma imagem maior
+   que o modal já passa dos 100%, então fica no tamanho real 1:1, com scroll
+   nos dois eixos. Um único par de regras cobre os dois casos. */
+.image.zoomed {
+  min-width: 100%;
+  max-width: none;
+  width: auto;
+}
+
+.empty {
+  padding: 32px 16px;
+  text-align: center;
+  color: #888888;
+  font-size: 13px;
+}
+
+/* ---------------------------------------------------------------------------
+   Modo de edição
+--------------------------------------------------------------------------- */
+.editPanel {
+  flex: 0 0 auto;
+  padding: 12px;
+  border-bottom: 1px solid #e0e0e0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background-color: #fafafa;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #777777;
+}
+
+.urlRow {
+  display: flex;
+  gap: 6px;
+}
+
+.input {
+  font: inherit;
+  font-size: 13px;
+  padding: 5px 7px;
+  border: 1px solid #cccccc;
+  border-radius: 3px;
+  background: #ffffff;
+  color: inherit;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.hint {
+  font-size: 11px;
+  color: #888888;
+  line-height: 1.4;
+}
+
+/* ---------------------------------------------------------------------------
+   Campos de texto exclusivos do mestre
+   Ficam abaixo da imagem, dentro do mesmo scroll do card.
+--------------------------------------------------------------------------- */
+.gmSection {
+  padding: 12px;
+  border-top: 1px solid #e0e0e0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  /* Fundo próprio: sem ele a seção é transparente e a imagem aparece por trás
+     do texto. Junto com `flex: 0 0 auto`, que impede a compressão. */
+  background-color: #ffffff;
+  flex: 0 0 auto;
+}
+
+.gmBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  align-self: flex-start;
+
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+
+  color: #8a6d0b;
+  background-color: #fdf6da;
+  border: 1px solid #ecdca5;
+  border-radius: 3px;
+  padding: 3px 6px;
+}
+
+.textarea {
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.5;
+  padding: 7px 8px;
+  border: 1px solid #cccccc;
+  border-radius: 3px;
+  background: #ffffff;
+  color: inherit;
+  resize: vertical;
+  min-height: 70px;
+  width: 100%;
+}
+
+.readonlyText {
+  font-size: 13px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 0;
+  color: #333333;
+}
+
+.mutedText {
+  font-size: 13px;
+  line-height: 1.55;
+  margin: 0;
+  color: #999999;
+  font-style: italic;
+}
+
+/* Estado "liberado para os jogadores" no botão que alterna. */
+.button.shared {
+  background-color: #e8f2e4;
+  border-color: #a9c79c;
+  color: #2f5423;
+}
+
+.button.shared:hover:not(:disabled) {
+  background-color: #dcebd6;
+}
+
+.writeError {
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 8px 12px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #b3261e;
+  background-color: #fdecea;
+  border-bottom: 1px solid #f5c6c2;
+}

@@ -1,0 +1,22 @@
+{
+  "name": "Handouts",
+  "version": "0.1.0",
+  "manifest_version": 1,
+  "author": "gaviao",
+  "description": "Handouts/Journal no estilo Roll20 para o Owlbear Rodeo",
+  "icon": "/logo.svg",
+  "action": {
+    "title": "Handouts",
+    "icon": "/icon.svg",
+    "popover": "/",
+    "height": 460,
+    "width": 320
+  },
+  "background_url": "/pages/background.html",
+  "permissions": [
+    {
+      "name": "clipboard-write",
+      "reason": "Copiar o backup do journal em JSON quando o navegador bloqueia o download dentro do iframe."
+    }
+  ]
+}

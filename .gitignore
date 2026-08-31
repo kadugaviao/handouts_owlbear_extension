@@ -1,0 +1,22 @@
+# dependências e build
+node_modules
+dist
+
+# configuração local do Claude Code (por máquina, não do projeto)
+.claude/settings.local.json
+
+# sistema operacional e editores
+.DS_Store
+Thumbs.db
+.idea
+.vscode
+
+# variáveis de ambiente — nenhuma hoje, mas o dia que houver
+.env
+.env.*
+!.env.example
+*.local
+
+# logs
+*.log
+npm-debug.log*
