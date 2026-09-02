@@ -75,23 +75,49 @@ function usePopoverAutoSize() {
     };
   }, []);
 
-  const onResize = useCallback(
-    (size: { width: number; height: number }) => {
-      const width = size.width + POPOVER_PADDING;
-      const height = size.height + POPOVER_PADDING;
-      const last = lastSent.current;
-      // Limiar para uma diferença de 1 px não realimentar o ResizeObserver.
-      if (
-        Math.abs(width - last.width) < 4 &&
-        Math.abs(height - last.height) < 4
-      ) {
-        return;
-      }
-      lastSent.current = { width, height };
-      void resizeHandoutPopover(width, height);
+  const frame = useRef<number>();
+  const pending = useRef<{ width: number; height: number }>();
+
+  // Limpa o quadro agendado se o componente sair antes dele rodar.
+  useEffect(
+    () => () => {
+      if (frame.current !== undefined) cancelAnimationFrame(frame.current);
     },
     [],
   );
+
+  /**
+   * O `ResizeObserver` dispara várias vezes durante um mesmo layout — a imagem
+   * carregando, o zoom abrindo, a janela do Owlbear sendo arrastada. Cada
+   * disparo custava DUAS chamadas de IPC (`setWidth` + `setHeight`) para o
+   * iframe pai.
+   *
+   * Agrupamos por quadro de animação: só o último tamanho de cada quadro é
+   * enviado. Uma rajada de 30 disparos vira 1 envio.
+   */
+  const onResize = useCallback((size: { width: number; height: number }) => {
+    pending.current = {
+      width: size.width + POPOVER_PADDING,
+      height: size.height + POPOVER_PADDING,
+    };
+    if (frame.current !== undefined) return; // já há um quadro agendado
+
+    frame.current = requestAnimationFrame(() => {
+      frame.current = undefined;
+      const next = pending.current;
+      if (!next) return;
+      const last = lastSent.current;
+      // Limiar para uma diferença de 1 px não realimentar o ResizeObserver.
+      if (
+        Math.abs(next.width - last.width) < 4 &&
+        Math.abs(next.height - last.height) < 4
+      ) {
+        return;
+      }
+      lastSent.current = next;
+      void resizeHandoutPopover(next.width, next.height);
+    });
+  }, []);
 
   return { onResize, maxSize };
 }
