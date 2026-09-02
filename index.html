@@ -3,6 +3,9 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- As imagens vêm de outra origem. Sem este preconnect, a primeira
+         miniatura paga DNS + TCP + TLS antes de começar a baixar. -->
+    <link rel="preconnect" href="https://images.owlbear.rodeo" crossorigin />
     <title>Handouts</title>
   </head>
   <body>
