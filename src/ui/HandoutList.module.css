@@ -228,10 +228,16 @@
   overflow: hidden;
 }
 
+/* A largura vem por `transform: scaleX()`, não por `width`.
+   Animar `width` força o navegador a recalcular layout a cada quadro — 60
+   recálculos por segundo durante a transição. `transform` só recompõe: sai da
+   thread de layout e vai para a de composição. */
 .budgetFill {
   height: 100%;
+  width: 100%;
+  transform-origin: left;
   background-color: #7aa06b;
-  transition: width 0.2s ease;
+  transition: transform 0.2s ease;
 }
 
 .budgetFill.warning {

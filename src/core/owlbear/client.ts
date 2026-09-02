@@ -230,5 +230,8 @@ export async function pickImageFromOwlbear(): Promise<{
   const images = await OBR.assets.downloadImages(false, undefined, "NOTE");
   const image = images[0];
   if (!image) return null;
+  // `image.image` também traz `width` e `height` reais. Deliberadamente NÃO os
+  // guardamos: seriam ~20 B por handout, 10% do orçamento de 10 kB, para
+  // evitar apenas um salto de layout. Ver `documents/spec.md`, Etapa 14.
   return { url: image.image.url, name: image.name };
 }

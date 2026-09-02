@@ -19,7 +19,23 @@ import {
 import styles from "./HandoutList.module.css";
 import type { Handout } from "../core/domain/handout";
 import { parseBackup } from "../core/domain/backup";
+import { resizedImageUrl } from "../core/domain/url";
 import { formatBytes, type BudgetStatus } from "../core/domain/limits";
+
+/** Só uma confirmação pode estar aberta por vez. */
+type Confirmacao =
+  | { kind: "none" }
+  | { kind: "import"; handouts: Handout[] }
+  | { kind: "remove"; handout: Handout };
+
+/**
+ * Largura pedida ao CDN para as miniaturas.
+ *
+ * Elas aparecem com 32 px de CSS; 64 cobre telas de densidade dupla. Sem isto,
+ * uma miniatura de 32 px baixava e decodificava a ilustração inteira — 16 MB de
+ * bitmap para 2048×2048, contra 0,016 MB agora.
+ */
+const THUMB_WIDTH = 64;
 
 export interface HandoutListProps {
   handouts: Handout[];
@@ -61,16 +77,20 @@ export function HandoutList({
   const [error, setError] = useState<string | null>(null);
   // Preenchido quando o download é bloqueado pelo sandbox do iframe.
   const [fallbackJson, setFallbackJson] = useState<string | null>(null);
-  // Importação aguardando confirmação. Importar SUBSTITUI o journal inteiro e
-  // não tem desfazer — inclusive tirando handouts da lista dos jogadores.
-  const [pendingImport, setPendingImport] = useState<Handout[] | null>(null);
-  // Exclusão aguardando confirmação. Um handout anotado perde as anotações para
-  // sempre, e um liberado some da tela dos jogadores.
-  const [pendingRemove, setPendingRemove] = useState<Handout | null>(null);
+  /**
+   * A confirmação pendente, como união discriminada.
+   *
+   * Eram dois estados independentes, e nada impedia os dois ficarem
+   * preenchidos ao mesmo tempo — bastava escolher um arquivo e clicar na
+   * lixeira para ver duas barras de confirmação empilhadas. Com uma união, o
+   * estado inválido deixa de existir por construção.
+   */
+  const [confirmacao, setConfirmacao] = useState<Confirmacao>({ kind: "none" });
 
   function handleExport() {
     setError(null);
     setFallbackJson(null);
+    setConfirmacao({ kind: "none" });
     if (onExport?.() === false) {
       // O iframe da extensão bloqueou o download — oferece copiar e colar.
       setFallbackJson(exportText?.() ?? "");
@@ -81,19 +101,19 @@ export function HandoutList({
   async function handleFile(file: File | undefined) {
     if (!file || !onImport) return;
     setError(null);
-    setPendingImport(null);
+    setConfirmacao({ kind: "none" });
     try {
       const text = await file.text();
-      setPendingImport(parseBackup(text)); // lança com mensagem legível
+      // `parseBackup` lança com mensagem legível.
+      setConfirmacao({ kind: "import", handouts: parseBackup(text) });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Falha ao ler o arquivo.");
     }
   }
 
-  async function confirmImport() {
-    if (!pendingImport || !onImport) return;
-    const handoutsToImport = pendingImport;
-    setPendingImport(null);
+  async function confirmImport(handoutsToImport: Handout[]) {
+    if (!onImport) return;
+    setConfirmacao({ kind: "none" });
     try {
       await onImport(handoutsToImport);
     } catch (e) {
@@ -180,7 +200,7 @@ export function HandoutList({
                     ? styles.warning
                     : ""
               }`}
-              style={{ width: `${Math.min(100, budget.ratio * 100)}%` }}
+              style={{ transform: `scaleX(${Math.min(1, budget.ratio)})` }}
             />
           </div>
         </div>
@@ -188,11 +208,11 @@ export function HandoutList({
 
       {/* Confirmação de importação: substituir é irreversível, e o número de
           handouts que se perde precisa estar na cara antes do clique. */}
-      {pendingImport && (
+      {confirmacao.kind === "import" && (
         <div className={styles.confirm}>
           <p className={styles.confirmText}>
-            Importar <strong>{pendingImport.length}</strong>{" "}
-            {pendingImport.length === 1 ? "handout" : "handouts"}?
+            Importar <strong>{confirmacao.handouts.length}</strong>{" "}
+            {confirmacao.handouts.length === 1 ? "handout" : "handouts"}?
             {handouts.length > 0 && (
               <>
                 {" "}
@@ -210,14 +230,14 @@ export function HandoutList({
             <button
               type="button"
               className={styles.smallButton}
-              onClick={() => setPendingImport(null)}
+              onClick={() => setConfirmacao({ kind: "none" })}
             >
               Cancelar
             </button>
             <button
               type="button"
               className={`${styles.button} ${styles.danger}`}
-              onClick={() => void confirmImport()}
+              onClick={() => void confirmImport(confirmacao.handouts)}
             >
               Substituir
             </button>
@@ -225,16 +245,17 @@ export function HandoutList({
         </div>
       )}
 
-      {pendingRemove && (
+      {confirmacao.kind === "remove" && (
         <div className={styles.confirm}>
           <p className={styles.confirmText}>
-            Tirar <strong>{pendingRemove.title || "este handout"}</strong> do
+            Tirar{" "}
+            <strong>{confirmacao.handout.title || "este handout"}</strong> do
             caderninho?
-            {(pendingRemove.description.trim() ||
-              pendingRemove.notes.trim()) && (
+            {(confirmacao.handout.description.trim() ||
+              confirmacao.handout.notes.trim()) && (
               <> As anotações serão perdidas.</>
             )}
-            {pendingRemove.sharedWithPlayers && (
+            {confirmacao.handout.sharedWithPlayers && (
               <> Ele também some da tela dos jogadores.</>
             )}{" "}
             A imagem continua na sua biblioteca do Owlbear.
@@ -243,7 +264,7 @@ export function HandoutList({
             <button
               type="button"
               className={styles.smallButton}
-              onClick={() => setPendingRemove(null)}
+              onClick={() => setConfirmacao({ kind: "none" })}
             >
               Cancelar
             </button>
@@ -251,9 +272,9 @@ export function HandoutList({
               type="button"
               className={`${styles.button} ${styles.danger}`}
               onClick={() => {
-                const target = pendingRemove;
-                setPendingRemove(null);
-                onRemove(target);
+                const alvo = confirmacao.handout;
+                setConfirmacao({ kind: "none" });
+                onRemove(alvo);
               }}
             >
               Tirar
@@ -333,7 +354,7 @@ export function HandoutList({
                 {handout.imageUrl ? (
                   <img
                     className={styles.thumb}
-                    src={handout.imageUrl}
+                    src={resizedImageUrl(handout.imageUrl, THUMB_WIDTH)}
                     alt=""
                     loading="lazy"
                     decoding="async"
@@ -360,7 +381,7 @@ export function HandoutList({
                 <button
                   type="button"
                   className={styles.ghostButton}
-                  onClick={() => setPendingRemove(handout)}
+                  onClick={() => setConfirmacao({ kind: "remove", handout })}
                   title="Tirar do caderninho (a imagem continua na biblioteca)"
                   aria-label={`Tirar ${handout.title} do caderninho`}
                 >

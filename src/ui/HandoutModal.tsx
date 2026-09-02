@@ -21,6 +21,19 @@ import {
   X,
 } from "lucide-react";
 import styles from "./HandoutModal.module.css";
+import { resizedImageUrl } from "../core/domain/url";
+
+/**
+ * Largura pedida ao CDN na visualização normal.
+ *
+ * O card tem no máximo 600 px; 1200 cobre telas de densidade dupla. No zoom
+ * pedimos a original, porque aí o ponto é justamente ver em resolução cheia.
+ *
+ * Uma ilustração de 4096×4096 custa 64 MB de bitmap decodificado; a 1200 px,
+ * 5,5 MB. O arquivo continua o mesmo no servidor — o que muda é o que o
+ * navegador precisa manter em memória.
+ */
+const VIEW_WIDTH = 1200;
 
 export interface HandoutModalProps {
   title: string;
@@ -173,7 +186,9 @@ export function HandoutModal({
     }
   }
 
-  const shownUrl = editing ? draft.imageUrl : imageUrl;
+  const rawUrl = editing ? draft.imageUrl : imageUrl;
+  // No zoom, a original. Fora dele, só os pixels que cabem na tela.
+  const shownUrl = zoomed ? rawUrl : resizedImageUrl(rawUrl, VIEW_WIDTH);
 
   // Nova URL merece nova chance de carregar.
   useEffect(() => {

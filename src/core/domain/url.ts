@@ -42,3 +42,42 @@ export function isSafeImageUrl(value: unknown): value is string {
 export function sanitizeImageUrl(value: unknown): string {
   return isSafeImageUrl(value) ? value : "";
 }
+
+/* -------------------------------------------------------------------------
+   Redimensionamento pelo CDN do Owlbear
+
+   O custo de MEMÓRIA de uma imagem é `largura × altura × 4 bytes`
+   DECODIFICADA — independe do tamanho do arquivo e do tamanho em que ela
+   aparece na tela. Uma ilustração de 2048×2048 ocupa 16 MB mesmo renderizada
+   numa miniatura de 32 px.
+
+   O CDN do Owlbear aceita `?width=N` e devolve a imagem realmente
+   redimensionada (verificado: 256×256 → 64×64 com `?width=64`). Pedir o
+   tamanho que vamos exibir derruba o custo em ordens de grandeza.
+
+   Atenção: `?w=N` NÃO funciona (é ignorado) e `&w=N` devolve HTTP 400.
+------------------------------------------------------------------------- */
+
+/** Host do CDN de imagens do Owlbear. Só nele podemos pedir redimensionamento. */
+const OWLBEAR_IMAGE_HOST = "images.owlbear.rodeo";
+
+/**
+ * Pede ao CDN do Owlbear uma versão da imagem com a largura dada.
+ *
+ * URLs de outros domínios voltam intactas: o mestre pode colar um endereço de
+ * qualquer lugar, e acrescentar `?width=` numa URL alheia iria de "sem efeito"
+ * a "quebra a imagem".
+ *
+ * @param width largura desejada em pixels de dispositivo
+ */
+export function resizedImageUrl(url: string, width: number): string {
+  if (!isSafeImageUrl(url)) return url;
+  try {
+    const parsed = new URL(url);
+    if (parsed.hostname !== OWLBEAR_IMAGE_HOST) return url;
+    parsed.searchParams.set("width", String(Math.round(width)));
+    return parsed.toString();
+  } catch {
+    return url;
+  }
+}
