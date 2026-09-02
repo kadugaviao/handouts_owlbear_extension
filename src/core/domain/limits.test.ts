@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   checkBudget,
+  EMPTY_BUDGET,
   formatBytes,
   MetadataBudgetError,
   OUR_METADATA_BUDGET,
@@ -75,5 +76,19 @@ describe("formatBytes", () => {
   it("usa bytes abaixo de 1 kB e kB acima", () => {
     expect(formatBytes(512)).toBe("512 B");
     expect(formatBytes(2048)).toBe("2.0 kB");
+  });
+});
+
+describe("EMPTY_BUDGET — usado no cliente do jogador", () => {
+  it("nunca acusa aviso nem estouro", () => {
+    expect(EMPTY_BUDGET.warning).toBe(false);
+    expect(EMPTY_BUDGET.exceeded).toBe(false);
+    expect(EMPTY_BUDGET.used).toBe(0);
+  });
+
+  it("tem a mesma forma que um resultado de checkBudget", () => {
+    expect(Object.keys(EMPTY_BUDGET).sort()).toEqual(
+      Object.keys(checkBudget([])).sort(),
+    );
   });
 });

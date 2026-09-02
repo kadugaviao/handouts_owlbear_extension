@@ -10,7 +10,7 @@
  * descartados aqui, na fronteira — os componentes de UI num cliente de jogador
  * nunca chegam a segurar esses campos.
  */
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import OBR, { type Metadata } from "@owlbear-rodeo/sdk";
 import { HANDOUTS_METADATA_KEY } from "./constants";
 import {
@@ -21,6 +21,7 @@ import {
 } from "../domain/handout";
 import {
   checkBudget,
+  EMPTY_BUDGET,
   MetadataBudgetError,
   type BudgetStatus,
 } from "../domain/limits";
@@ -70,9 +71,28 @@ function useRoomHandouts() {
   const [loading, setLoading] = useState(true);
   const [isGM, setIsGM] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  /**
+   * Serialização da NOSSA fatia da metadata na última atualização aplicada.
+   *
+   * `onMetadataChange` dispara para qualquer mudança na sala, vinda de qualquer
+   * extensão. Sem esta comparação, um rastreador de iniciativa escrevendo a
+   * cada turno nos fazia reparsear a lista, criar um array novo, invalidar os
+   * `useMemo` a jusante (o filtro de visibilidade e o `checkBudget`, que roda
+   * `JSON.stringify`) e re-renderizar a árvore inteira — tudo para chegar ao
+   * mesmo resultado.
+   */
+  const lastSlice = useRef<string>();
 
   useEffect(() => {
     let active = true;
+
+    /** Aplica a mudança só se a nossa fatia realmente mudou. */
+    function applyIfChanged(metadata: Metadata) {
+      const slice = JSON.stringify(metadata[HANDOUTS_METADATA_KEY] ?? null);
+      if (slice === lastSlice.current) return;
+      lastSlice.current = slice;
+      setHandouts(readHandouts(metadata));
+    }
 
     // >>> OBR: leitura inicial + papel do jogador.
     //
@@ -82,7 +102,7 @@ function useRoomHandouts() {
     Promise.all([OBR.room.getMetadata(), OBR.player.getRole()])
       .then(([metadata, role]) => {
         if (!active) return;
-        setHandouts(readHandouts(metadata));
+        applyIfChanged(metadata);
         setIsGM(role === "GM");
         setLoadError(null);
       })
@@ -100,9 +120,7 @@ function useRoomHandouts() {
       });
 
     // >>> OBR: assinaturas reativas.
-    const unsubscribeMetadata = OBR.room.onMetadataChange((metadata) => {
-      setHandouts(readHandouts(metadata));
-    });
+    const unsubscribeMetadata = OBR.room.onMetadataChange(applyIfChanged);
     const unsubscribePlayer = OBR.player.onChange((player) => {
       setIsGM(player.role === "GM");
     });
@@ -208,7 +226,14 @@ export function useHandouts(): UseHandouts {
 
   // O orçamento é medido sobre a lista COMPLETA da sala, não sobre a versão
   // filtrada que um jogador enxerga.
-  const budget = useMemo(() => checkBudget(raw), [raw]);
+  //
+  // Só o mestre escreve e só ele vê a barra, então para um jogador isto seria
+  // um `JSON.stringify` da lista inteira a cada mudança, para um número que
+  // ninguém lê.
+  const budget = useMemo(
+    () => (isGM ? checkBudget(raw) : EMPTY_BUDGET),
+    [raw, isGM],
+  );
 
   return {
     handouts,

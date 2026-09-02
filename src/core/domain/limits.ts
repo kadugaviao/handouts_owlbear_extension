@@ -39,6 +39,20 @@ export interface BudgetStatus {
   warning: boolean;
 }
 
+/**
+ * Orçamento zerado, para quem não escreve na metadata.
+ *
+ * Um cliente de jogador nunca grava nem vê a barra de ocupação; medir a lista
+ * a cada mudança seria um `JSON.stringify` para um número que ninguém lê.
+ */
+export const EMPTY_BUDGET: BudgetStatus = {
+  used: 0,
+  budget: OUR_METADATA_BUDGET,
+  ratio: 0,
+  exceeded: false,
+  warning: false,
+};
+
 export function checkBudget(value: unknown): BudgetStatus {
   const used = byteSize(value);
   const ratio = used / OUR_METADATA_BUDGET;
