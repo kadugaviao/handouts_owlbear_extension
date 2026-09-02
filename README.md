@@ -180,6 +180,11 @@ Pages serve em subpasta e quebraria todos eles.
 Build `npm run build`, pasta de saída `dist`. Passo a passo em
 [`documents/spec.md`](documents/spec.md), seção P2.
 
+O `public/_headers` já define a política de cache para Cloudflare Pages e
+Netlify. O ponto crítico ali é o `manifest.json` em `no-cache`: é o endereço
+que o Owlbear guarda para a extensão, e cacheado ele impediria que quem já
+instalou recebesse atualizações.
+
 ---
 
 ## Stack

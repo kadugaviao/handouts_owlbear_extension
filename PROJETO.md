@@ -18,11 +18,11 @@ anota o que quiser, e libera para os jogadores com um clique.
 |---|---|
 | Compilação (`tsc --noEmit`) | ✅ limpa |
 | Build (`npm run build`) | ✅ 3 bundles |
-| Testes (`npm test`) | ✅ 61 passando |
+| Testes (`npm test`) | ✅ 68 passando |
 | Rodando no Owlbear | ✅ confirmado pelo mestre |
 | Testado com jogador real | ✅ liberar, reabrir e retirar validados em segunda tela |
 | Publicado (deploy) | ❌ só `localhost` |
-| Repositório Git | ❌ ainda não inicializado |
+| Repositório Git | ✅ [kadugaviao/handouts_owlbear_extension](https://github.com/kadugaviao/handouts_owlbear_extension), público |
 
 **Consequência imediata do "só localhost":** a extensão só existe enquanto o
 `npm run dev` está de pé na máquina do desenvolvedor. Num celular ou em outro

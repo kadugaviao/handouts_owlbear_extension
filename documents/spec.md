@@ -213,6 +213,205 @@ Ver B9.
 
 Ver B10 e B11.
 
+### Etapa 16 — Gargalos fora do JavaScript
+
+Varredura nas camadas que as análises de React não cobrem: rede, cache HTTP,
+CSS/renderização e o protocolo do próprio Owlbear.
+
+**Aplicado**
+
+| O quê | Por quê |
+|---|---|
+| `preconnect` para `images.owlbear.rodeo` em `index.html` e `pages/handout.html` | As imagens vêm de outra origem. Sem isso, a primeira miniatura paga DNS + TCP + TLS antes de começar a baixar |
+| `public/_headers` com política de cache | Ver abaixo — o `manifest.json` é o caso crítico |
+| Barra de orçamento anima com `transform: scaleX()` em vez de `width` | Animar `width` força recálculo de layout a cada quadro (60/s durante a transição); `transform` só recompõe |
+
+**O `_headers` e por que o `manifest.json` é crítico**
+
+O `manifest.json` é o endereço que o Owlbear guarda para a extensão. Cacheado
+com agressividade, quem já instalou **nunca recebe atualização** — e o sintoma
+seria "publiquei e nada mudou", difícil de diagnosticar. Ficou `no-cache`.
+
+Os arquivos em `/assets/` carregam hash do conteúdo no nome, então são
+`immutable` com um ano de validade, sem risco. O HTML não tem hash: precisa
+revalidar para apontar aos assets novos.
+
+O `manifest.json` também recebe `Access-Control-Allow-Origin: *`
+explicitamente. Não consegui determinar de forma conclusiva se o Cloudflare
+Pages já manda esse cabeçalho por padrão — e é exatamente por isso que ele está
+declarado. Sem ele, produção repetiria o `NetworkError` do B9, com o agravante
+de só aparecer depois do deploy.
+
+**Verificado e já ótimo**
+
+- **Fontes:** nenhuma fonte web. A pilha é `system-ui, -apple-system, "Segoe UI",
+  Roboto, sans-serif` — zero download, zero *flash* de texto.
+- **CSS:** 16 kB no total, sem `filter`, `backdrop-filter` nem `will-change`.
+- **`modulepreload`:** o Vite já emite para os chunks compartilhados.
+
+**Custo real numa mesa de 4 pessoas**
+
+| Momento | Download |
+|---|---|
+| Cada cliente ao entrar na sala (só o background) | **57 kB** |
+| Ao abrir o journal (só quem abrir) | +217 kB |
+| 4 clientes entrando, ninguém abrindo nada | 231 kB no total |
+
+**Limitação sem saída: o SDK não é tree-shakeable**
+
+`@owlbear-rodeo/sdk` exporta um único objeto `OBR` com todas as APIs já
+instanciadas como propriedades. Carregamos `scene`, `tool`, `contextMenu`,
+`interaction`, `notification`, `modal`, `theme`, `fog`, `grid` e `history` sem
+usar nenhuma. É a maior parte dos 57 kB que **todo cliente da sala** baixa.
+Só um fork do SDK resolveria — desproporcional.
+
+**Avaliado e NÃO feito**
+
+| Ideia | Por quê não |
+|---|---|
+| `content-visibility: auto` nas linhas da lista | Ganho marginal com `n` ≤ 53 e traz o risco de salto de rolagem se o `contain-intrinsic-size` errar |
+| `srcset` por densidade de tela nas miniaturas | Pedimos 64 px (2× de 32). Numa tela 1× isso são 10 kB "a mais" — complexidade sem ganho |
+| Cortar o read-before-write das escritas | São dois trajetos de IPC por gravação, mas só em ação explícita do usuário. O read é o que protege contra sobrescrever outro cliente |
+
+### Etapa 15 — Redimensionamento pelo CDN (o maior ganho do projeto)
+
+A hipótese da Etapa 14 foi verificada com uma URL real do CDN, e ela vale.
+
+**O parâmetro é `width`, não `w`.** Medido com uma imagem de 256×256:
+
+| Parâmetro | HTTP | Bytes | Dimensões reais |
+|---|---|---|---|
+| (nenhum) | 200 | 84 kB | 256×256 |
+| **`?width=64`** | 200 | 10 kB | **64×64** ✅ |
+| `?width=128` | 200 | 32 kB | 128×128 ✅ |
+| `?height=64` | 200 | 10 kB | 64×64 ✅ |
+| `?w=64` | 200 | 84 kB | 256×256 — ignorado |
+| `&w=64` | **400** | — | erro |
+| `?width=1200` | 200 | 84 kB | 256×256 — **não amplia** ✅ |
+
+O CDN redimensiona de verdade, não recomprime; e não amplia quando o pedido é
+maior que o original. Os dois comportamentos são os desejados.
+
+**Aplicado**
+
+- Miniaturas da lista: `?width=64` (aparecem com 32 px de CSS; 64 cobre telas
+  de densidade dupla)
+- Imagem do modal: `?width=1200` (o card tem no máximo 600 px)
+- Zoom: URL original, porque aí o ponto é ver em resolução cheia
+
+`resizedImageUrl` só reescreve URLs de `images.owlbear.rodeo`. Endereços de
+outros domínios voltam intactos — o mestre pode colar uma URL de qualquer
+lugar, e acrescentar `?width=` numa URL alheia iria de inócuo a quebrar a
+imagem.
+
+**Ganho medido**
+
+| Imagem | Antes | Miniatura | Modal |
+|---|---|---|---|
+| 256×256 | 0,3 MB | 0,016 MB (16×) | 0,3 MB |
+| 1024×1024 | 4 MB | 0,016 MB (256×) | 4 MB |
+| 2048×2048 | 16 MB | 0,016 MB (**1024×**) | 5,5 MB (3×) |
+| 4096×4096 | 64 MB | 0,016 MB (**4096×**) | 5,5 MB (12×) |
+
+Uma lista com 20 ilustrações de 2048×2048: **320 MB → 0,3 MB**.
+
+É, com folga, a maior otimização do projeto — três ordens de grandeza, contra
+os kilobytes que qualquer ajuste de JavaScript renderia.
+
+Testes: 63 → 68.
+
+### Etapa 14 — Memória: onde ela realmente está
+
+Avaliação das técnicas clássicas de performance em React contra a forma **deste**
+app. A conclusão é que a maioria não se aplica, e a que se aplica não é código
+JavaScript.
+
+**Medição do bundle**
+
+| Chunk | Peso | O que é |
+|---|---|---|
+| `global` | 148 kB | **`react-dom` sozinho é 132 kB** |
+| `client` | 57 kB | SDK do Owlbear |
+| nosso código | 24 kB | as duas páginas somadas |
+| 12 ícones lucide | ~4 kB | irrelevante |
+
+**Custo de memória de uma imagem decodificada** (largura × altura × 4 bytes,
+independente do tamanho do arquivo e do tamanho exibido):
+
+| Imagem | Memória |
+|---|---|
+| token 256×256 | 0,3 MB |
+| retrato 1024×1024 | 4 MB |
+| ilustração 2048×2048 | 16 MB |
+| mapa 4096×4096 | 64 MB |
+
+20 ilustrações na lista = **320 MB**, ou **1475× o bundle JS inteiro**.
+
+Em memória, este app é imagem. O resto é ruído.
+
+**Veredito por técnica**
+
+| Técnica | Aplicável? |
+|---|---|
+| Code splitting / lazy loading | **Já no máximo.** A divisão por página faz o `background` carregar 57 kB em vez de 217 kB — sem React nem lucide. Dentro das páginas sobram 24 kB de código nosso; dividir mais custaria um estado de carregamento para poupar kilobytes |
+| Virtualização de listas | **Não.** `n` ≤ 53 pelo orçamento de metadata; virtualizar 53 linhas é biblioteca e complexidade para nada |
+| Otimização de imagens | **Sim — é o único lever grande.** `loading="lazy"` e `decoding="async"` já aplicados. O passo que falta depende de o CDN do Owlbear aceitar redimensionamento por parâmetro (não verificado; ver P6) |
+| Evitar renders desnecessários | **Feito na Etapa 13** — curto-circuito nas mudanças de metadata |
+| Cache de API | **Não se aplica.** A metadata é push via `onMetadataChange`, sem polling. O `getMetadata` antes de cada escrita é deliberado, para concorrência |
+| Manter estado local | Estado já é mínimo |
+| Debounce / throttle | **Feito.** O `ResizeObserver` disparava várias vezes por layout, cada disparo custando duas chamadas de IPC (`setWidth` + `setHeight`). Agrupado por quadro de animação: uma rajada de 30 disparos vira 1 envio |
+| `React.memo`, `useMemo`, `useCallback` | Sem problema medido. O `useMemo` que importava (orçamento) já foi tratado |
+
+**Decisão registrada: NÃO guardar as dimensões da imagem**
+
+`ImageContent` do SDK traz `width` e `height` reais, e nós os descartamos de
+propósito. Guardá-los custaria ~20 B por handout — 10% do orçamento de 10 kB —
+para evitar apenas um salto de layout, que já é mitigado por só reportar o
+tamanho depois de `onLoad`.
+
+### Etapa 13 — Eficiência
+
+Três ganhos reais. O resto foi deliberadamente **não** feito (ver abaixo).
+
+**1. Curto-circuito nas mudanças de metadata** (o maior)
+
+`OBR.room.onMetadataChange` dispara para qualquer mudança na sala, vinda de
+qualquer extensão. Reparseávamos a lista inteira sempre — criando um array
+novo, invalidando os `useMemo` a jusante (filtro de visibilidade e
+`checkBudget`, que roda `JSON.stringify`) e re-renderizando a árvore.
+
+Agora comparamos a serialização da NOSSA fatia e só aplicamos se mudou.
+
+Medido com 2000 eventos vindos de outra extensão e 40 handouts nossos:
+67 ms → 31 ms de parse. O ganho de CPU é modesto em absoluto (33 µs → 15 µs por
+evento); **o ganho real são os 1999 re-renders evitados**, que o benchmark não
+mede.
+
+**2. União discriminada para as confirmações**
+
+`pendingImport` e `pendingRemove` eram estados independentes: bastava escolher
+um arquivo e clicar na lixeira para ver duas barras de confirmação empilhadas.
+Viraram uma união (`{kind: "none" | "import" | "remove"}`) — o estado inválido
+deixou de existir por construção.
+
+**3. Orçamento não é calculado no cliente do jogador**
+
+Só o mestre escreve e só ele vê a barra. Para um jogador era um
+`JSON.stringify` da lista inteira a cada mudança, para um número que ninguém lê.
+Passou a usar `EMPTY_BUDGET`.
+
+**O que foi avaliado e NÃO feito**
+
+| Ideia | Por que não |
+|---|---|
+| `Map` no lugar da varredura linear | `n` ≤ 53 por causa do próprio orçamento; otimizar um laço de 53 elementos é complexidade sem ganho |
+| `React.memo` nos componentes | Sem problema de re-render medido; com o item 1, ficou mais raro ainda |
+| Preact no lugar de React | Cortaria ~130 kB, mas é troca grande para um ganho que ninguém reclamou |
+| `zod` no lugar dos type guards | ~13 kB gzipped para três formas pequenas e estáveis |
+| `flatMap` no lugar de `map().filter()` | Perde o estreitamento de tipo do TypeScript sem ganho mensurável |
+
+Testes: 61 → 63.
+
 ### Etapa 12 — Varredura final
 
 **Bugs de perda silenciosa** (B17–B19) — todos no caminho de erro, que é onde
@@ -362,7 +561,8 @@ assim o navegador recusa.
 |---|---|---|
 | Tipagem | `npx tsc --noEmit` | ✅ limpa |
 | Build | `npm run build` | ✅ 3 bundles |
-| Testes | `npm test` | ✅ 61 passando |
+| Testes | `npm test` | ✅ 68 passando |
+| CDN redimensiona (`?width=`) | medido com URL real | ✅ ver Etapa 15 |
 | Manifest aponta para arquivos reais | `manifest.test.ts` | ✅ validado por mutação |
 | Camadas respeitadas | `architecture.test.ts` | ✅ |
 | Vulnerabilidades em produção | `npm audit --omit=dev` | ⚠️ 2 moderadas, sem correção disponível (ver abaixo) |
