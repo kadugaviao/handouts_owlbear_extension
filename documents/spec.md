@@ -213,6 +213,43 @@ Ver B9.
 
 Ver B10 e B11.
 
+### Etapa 17 — Versionamento, CI, lint e licença
+
+**Versionamento.** Trabalho das Etapas 13–16 dividido em 5 commits, agrupados
+pelo critério de que **cada um compile isoladamente** — verificado com
+`git rebase --exec 'npx tsc --noEmit'`. É o que faz `git bisect` funcionar e
+`git revert` ser seguro. `src/ui/HandoutList.tsx` carregava três mudanças ao
+mesmo tempo e foi inteiro para um commit: fatiar hunks geraria commits
+quebrados, o que é pior que baixa granularidade.
+
+**CI.** `.github/workflows/ci.yml` roda lint, testes e build em Node 22 a cada
+push e pull request. `npm ci` em vez de `npm install`, para instalar exatamente
+o que está no lock. `actions/checkout` e `actions/setup-node` na v5 — a v4 usa
+Node 20, que o GitHub está aposentando.
+
+**ESLint.** Configuração flat com `typescript-eslint` e `eslint-plugin-react-hooks`.
+Ele encontrou **dois erros reais**, ambos do mesmo anti-padrão
+([you might not need an effect](https://react.dev/learn/you-might-not-need-an-effect)):
+
+1. `editing` e `draft` eram dois estados para um só conceito, mantidos em
+   sincronia por um `useEffect` que reescrevia o rascunho a cada mudança de
+   prop. Além de cascatear renders, permitia o estado inválido "editando com
+   rascunho velho". Viraram um único `draft: Draft | null`, onde `null`
+   significa "não editando" — o efeito deixou de existir.
+2. O estado de carregamento da imagem era resetado por `useEffect` quando a URL
+   mudava. Passou a carregar a própria URL (`imageState.url`) e a se ajustar
+   **durante a renderização**, que é o padrão documentado pelo React para
+   "resetar estado quando uma prop muda".
+
+Nenhuma regra foi desativada para acomodar o código. A única exceção é
+`react-refresh/only-export-components` em `src/pages/`, e por um motivo
+concreto: aqueles arquivos são pontos de entrada que montam no DOM, não módulos
+importáveis, então Fast Refresh não se aplica a eles.
+
+**Licença.** MIT. Sem licença, um repositório público é legalmente
+inutilizável por terceiros — o padrão do direito autoral é "todos os direitos
+reservados".
+
 ### Etapa 16 — Gargalos fora do JavaScript
 
 Varredura nas camadas que as análises de React não cobrem: rede, cache HTTP,
@@ -697,8 +734,9 @@ Owlbear responde *"Não foi possível carregar a extensão: localhost"*, porque
 `localhost` no celular é o próprio celular.
 
 **Restrição que decide o host:** 5 caminhos absolutos a partir da raiz —
-`/logo.svg`, `/icon.svg`, `/` e `/background.html` no `manifest.json`, e
-`/handout.html` em `core/owlbear/client.ts`. Um host que sirva em subpasta quebra todos.
+`/logo.svg`, `/icon.svg`, `/` e `/pages/background.html` no `manifest.json`, e
+`/pages/handout.html` em `core/owlbear/client.ts`. Um host que sirva em
+subpasta quebra todos.
 
 | Host | Endereço | Raiz? | Custo |
 |---|---|---|---|
@@ -714,10 +752,12 @@ Passos: `git init` e subir para o GitHub → conectar no Cloudflare Pages → bu
 Depois do deploy, os jogadores não precisam de nada rodando: o endereço é
 permanente e funciona com o computador do mestre desligado.
 
-### P3 — Inicializar o Git
+### ~~P3 — Inicializar o Git~~ ✅ concluído
 
-O projeto **ainda não é um repositório**. `.gitignore` já existe
-(`node_modules`, `dist`).
+Repositório público em
+[kadugaviao/handouts_owlbear_extension](https://github.com/kadugaviao/handouts_owlbear_extension),
+com histórico em Conventional Commits. Commits configurados com o e-mail de
+encaminhamento do GitHub, para não expor o endereço pessoal.
 
 ### P4 — Journal do jogador *(adiado, R13)*
 

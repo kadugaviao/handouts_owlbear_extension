@@ -35,6 +35,14 @@ import { resizedImageUrl } from "../core/domain/url";
  */
 const VIEW_WIDTH = 1200;
 
+/** Os campos editáveis de um handout. */
+interface Draft {
+  title: string;
+  imageUrl: string;
+  description: string;
+  notes: string;
+}
+
 export interface HandoutModalProps {
   title: string;
   imageUrl: string;
@@ -95,15 +103,35 @@ export function HandoutModal({
   onPickImage,
 }: HandoutModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
-  const [editing, setEditing] = useState(false);
   const [zoomed, setZoomed] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [imageFailed, setImageFailed] = useState(false);
-  // Enquanto a imagem não resolve, o card tem só a altura do cabeçalho. Avisar
-  // o tamanho nesse instante encolheria o popover a um talo, e ele voltaria a
-  // crescer quando a imagem chegasse — um salto feio. Só reportamos depois.
-  const [imageSettled, setImageSettled] = useState(false);
-  const [draft, setDraft] = useState({ title, imageUrl, description, notes });
+
+  /**
+   * O rascunho da edição. `null` significa "não está editando".
+   *
+   * Antes eram DOIS estados (`editing` e `draft`) mantidos em sincronia por um
+   * `useEffect` que reescrevia o rascunho a cada mudança de prop. Além de
+   * cascatear renders, aquilo permitia o estado inválido "editando com rascunho
+   * velho". Um único estado anulável elimina os dois: ao entrar na edição
+   * tiramos uma fotografia das props; ao sair, jogamos fora.
+   */
+  const [draft, setDraft] = useState<Draft | null>(null);
+  const editing = draft !== null;
+
+  /**
+   * Carregamento da imagem, atrelado à URL que o originou.
+   *
+   * Guardar a URL junto do estado é o que permite detectar troca de imagem
+   * durante a renderização, sem `useEffect`.
+   */
+  const [imageState, setImageState] = useState({
+    url: "",
+    failed: false,
+    // Enquanto a imagem não resolve, o card tem só a altura do cabeçalho.
+    // Avisar o tamanho nesse instante encolheria o popover a um talo, e ele
+    // voltaria a crescer quando a imagem chegasse — um salto feio.
+    settled: false,
+  });
 
   // Esc fecha a janela. Em modo de edição, Esc primeiro cancela a edição —
   // fechar direto descartaria o texto digitado sem aviso.
@@ -112,7 +140,7 @@ export function HandoutModal({
       if (event.key !== "Escape") return;
       event.preventDefault();
       if (editing) {
-        setEditing(false);
+        setDraft(null);
       } else {
         void onClose();
       }
@@ -125,7 +153,7 @@ export function HandoutModal({
   // altura: a imagem carregando, entrar em modo de edição, abrir o zoom.
   useEffect(() => {
     const element = modalRef.current;
-    if (!element || !onResize || !imageSettled) return;
+    if (!element || !onResize || !imageState.settled) return;
     const observer = new ResizeObserver(() => {
       const rect = element.getBoundingClientRect();
       if (rect.width > 0 && rect.height > 0) {
@@ -134,26 +162,25 @@ export function HandoutModal({
     });
     observer.observe(element);
     return () => observer.disconnect();
-  }, [onResize, imageSettled]);
+  }, [onResize, imageState.settled]);
 
-  // Se o handout mudar por fora (outro cliente editou), sincroniza o rascunho —
-  // mas nunca por cima do que o mestre está digitando.
-  useEffect(() => {
-    if (!editing) setDraft({ title, imageUrl, description, notes });
-  }, [title, imageUrl, description, notes, editing]);
+  /** Altera um campo do rascunho. Sem rascunho não há o que alterar. */
+  function updateDraft(patch: Partial<Draft>) {
+    setDraft((d) => (d === null ? d : { ...d, ...patch }));
+  }
 
-  async function handleSave() {
+  async function handleSave(atual: Draft) {
     setBusy(true);
     try {
       const saved = await onSave?.({
-        ...draft,
-        title: draft.title.trim() || "Sem título",
-        imageUrl: draft.imageUrl.trim(),
+        ...atual,
+        title: atual.title.trim() || "Sem título",
+        imageUrl: atual.imageUrl.trim(),
       });
-      // Sair da edição descarta o rascunho. Se a gravação falhou (orçamento
-      // estourado, por exemplo), ficamos onde estamos: o texto digitado
-      // continua na tela, junto da mensagem de erro.
-      if (saved !== false) setEditing(false);
+      // Descartar o rascunho é o que sai da edição. Se a gravação falhou
+      // (orçamento estourado, por exemplo), ficamos onde estamos: o texto
+      // digitado continua na tela, junto da mensagem de erro.
+      if (saved !== false) setDraft(null);
     } finally {
       setBusy(false);
     }
@@ -165,12 +192,16 @@ export function HandoutModal({
     try {
       const picked = await onPickImage();
       if (picked) {
-        setDraft((d) => ({
-          ...d,
-          imageUrl: picked.url,
-          // O nome do arquivo vira o título quando ainda não há um.
-          title: d.title.trim() || picked.name,
-        }));
+        setDraft((d) =>
+          d === null
+            ? d
+            : {
+                ...d,
+                imageUrl: picked.url,
+                // O nome do arquivo vira o título quando ainda não há um.
+                title: d.title.trim() || picked.name,
+              },
+        );
       }
     } finally {
       setBusy(false);
@@ -186,16 +217,19 @@ export function HandoutModal({
     }
   }
 
-  const rawUrl = editing ? draft.imageUrl : imageUrl;
+  const rawUrl = draft?.imageUrl ?? imageUrl;
   // No zoom, a original. Fora dele, só os pixels que cabem na tela.
   const shownUrl = zoomed ? rawUrl : resizedImageUrl(rawUrl, VIEW_WIDTH);
 
-  // Nova URL merece nova chance de carregar.
-  useEffect(() => {
-    setImageFailed(false);
+  // Ajuste de estado DURANTE a renderização — o padrão que o React documenta
+  // para "resetar estado quando uma prop muda". Chamar setState aqui descarta o
+  // render em curso e reexecuta o componente antes de pintar, sem o
+  // cascateamento que um `useEffect` provocaria.
+  // https://react.dev/learn/you-might-not-need-an-effect
+  if (imageState.url !== shownUrl) {
     // Sem imagem não há o que esperar: o card já está no tamanho final.
-    setImageSettled(!shownUrl);
-  }, [shownUrl]);
+    setImageState({ url: shownUrl, failed: false, settled: !shownUrl });
+  }
 
   return (
     <div
@@ -222,7 +256,7 @@ export function HandoutModal({
               className={styles.titleInput}
               value={draft.title}
               onChange={(e) =>
-                setDraft((d) => ({ ...d, title: e.target.value }))
+                updateDraft({ title: e.target.value })
               }
               placeholder="Título do handout"
               aria-label="Título do handout"
@@ -263,7 +297,11 @@ export function HandoutModal({
             <button
               type="button"
               className={styles.button}
-              onClick={() => (editing ? void handleSave() : setEditing(true))}
+              onClick={() =>
+              draft
+                ? void handleSave(draft)
+                : setDraft({ title, imageUrl, description, notes })
+            }
               disabled={busy}
             >
               {editing ? (
@@ -320,7 +358,7 @@ export function HandoutModal({
                 className={styles.input}
                 value={draft.imageUrl}
                 onChange={(e) =>
-                  setDraft((d) => ({ ...d, imageUrl: e.target.value }))
+                  updateDraft({ imageUrl: e.target.value })
                 }
                 placeholder="https://... ou escolha um arquivo"
               />
@@ -347,21 +385,21 @@ export function HandoutModal({
 
       {/* ---------- 3. Corpo: a imagem ---------- */}
       <div className={styles.body}>
-        {shownUrl && !imageFailed ? (
+        {shownUrl && !imageState.failed ? (
           <img
             className={`${styles.image} ${zoomed ? styles.zoomed : ""}`}
             src={shownUrl}
             alt={title}
             decoding="async"
-            onLoad={() => setImageSettled(true)}
-            onError={() => {
-              setImageFailed(true);
-              setImageSettled(true); // o card já está no tamanho final
-            }}
+            onLoad={() => setImageState((i) => ({ ...i, settled: true }))}
+            onError={() =>
+              // Falhou: o card já está no tamanho final, então também assenta.
+              setImageState((i) => ({ ...i, failed: true, settled: true }))
+            }
           />
         ) : (
           <p className={styles.empty}>
-            {imageFailed
+            {imageState.failed
               ? "Não foi possível carregar esta imagem. O endereço pode ter expirado ou o arquivo foi removido da biblioteca."
               : canEdit
                 ? 'Nenhuma imagem definida. Clique em "Edit" para escolher uma.'
@@ -390,7 +428,7 @@ export function HandoutModal({
                 className={styles.textarea}
                 value={draft.description}
                 onChange={(e) =>
-                  setDraft((d) => ({ ...d, description: e.target.value }))
+                  updateDraft({ description: e.target.value })
                 }
                 placeholder="Do que se trata este handout?"
               />
@@ -411,7 +449,7 @@ export function HandoutModal({
                 className={styles.textarea}
                 value={draft.notes}
                 onChange={(e) =>
-                  setDraft((d) => ({ ...d, notes: e.target.value }))
+                  updateDraft({ notes: e.target.value })
                 }
                 placeholder="Suas anotações secretas sobre este handout."
               />

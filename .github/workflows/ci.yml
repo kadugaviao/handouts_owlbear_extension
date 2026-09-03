@@ -23,6 +23,9 @@ jobs:
       # máquina de quem desenvolve.
       - run: npm ci
 
+      - name: Lint
+        run: npm run lint
+
       - name: Testes
         run: npm test
 

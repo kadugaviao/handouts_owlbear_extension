@@ -23,6 +23,8 @@ anota o que quiser, e libera para os jogadores com um clique.
 | Testado com jogador real | ✅ liberar, reabrir e retirar validados em segunda tela |
 | Publicado (deploy) | ❌ só `localhost` |
 | Repositório Git | ✅ [kadugaviao/handouts_owlbear_extension](https://github.com/kadugaviao/handouts_owlbear_extension), público |
+| CI (GitHub Actions) | ✅ lint + testes + build a cada push |
+| Licença | ✅ MIT |
 
 **Consequência imediata do "só localhost":** a extensão só existe enquanto o
 `npm run dev` está de pé na máquina do desenvolvedor. Num celular ou em outro
