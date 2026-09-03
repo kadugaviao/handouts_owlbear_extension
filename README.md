@@ -82,6 +82,9 @@ em vez de manter um túnel.
 | `npm run dev` | Servidor de desenvolvimento |
 | `npm run build` | Build de produção em `dist/` |
 | `npm test` | Testes |
+| `npm run lint` | ESLint |
+
+O [CI](.github/workflows/ci.yml) roda os três últimos a cada push.
 
 ---
 
@@ -191,5 +194,10 @@ instalou recebesse atualizações.
 
 ## Stack
 
-React 18 · TypeScript 5.7 · Vite 6 · Vitest 2 · `@owlbear-rodeo/sdk` 3.1 ·
-CSS Modules (sem framework — roda em iframe, peso importa).
+React 18 · TypeScript 5.7 · Vite 6 · Vitest 2 · ESLint 9 ·
+`@owlbear-rodeo/sdk` 3.1 · CSS Modules (sem framework — roda em iframe, peso
+importa).
+
+## Licença
+
+[MIT](LICENSE).
