@@ -1,5 +1,7 @@
 # Handouts para Owlbear Rodeo
 
+![CI](https://github.com/kadugaviao/handouts_owlbear_extension/actions/workflows/ci.yml/badge.svg)
+
 Journal estilo Roll20: o mestre abre uma imagem da sua biblioteca numa janela
 flutuante sobre o mapa, anota o que quiser, e libera para os jogadores com um
 clique.
