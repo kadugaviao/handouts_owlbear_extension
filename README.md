@@ -94,7 +94,7 @@ O [CI](.github/workflows/ci.yml) roda os três últimos a cada push.
 index.html         entrada da action (o manifest aponta para "/")
 pages/             páginas internas
 ├── handout.html     a janela flutuante
-└── background.html  listeners sempre vivos
+└── background.html  ouve o "mostrar", sempre vivo
 src/
 ├── core/          dados, regras e integração — sem React
 │   ├── domain/      lógica pura, testável sem mocks

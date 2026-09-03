@@ -89,7 +89,7 @@ Reabrir o mesmo arquivo da biblioteca reencontra as anotações que já existiam
 
 ```
 manifest.json ──┬─ action.popover  → index.html             (o caderninho)
-                ├─ background_url  → pages/background.html (listeners)
+                ├─ background_url  → pages/background.html (ouve "mostrar")
                 └─                   pages/handout.html    (janela flutuante)
 ```
 
@@ -120,8 +120,12 @@ Mestre clica
       → OBR.popover.open("/handout.html?src=…&title=…")
 ```
 
-Os listeners vivem no **background**, não no popover: se vivessem no popover,
-o jogador com ele fechado — o caso normal — nunca receberia nada.
+O listener do **"mostrar"** vive no background: se vivesse no popover, o
+jogador com ele fechado — o caso normal — nunca receberia nada.
+
+O do **"retirar"** vive na própria janela, porque só ela sabe qual handout está
+mostrando. O background só conhecia os handouts que ele mesmo abriu; um jogador
+que abrisse pela própria lista ficava invisível para ele.
 
 ---
 

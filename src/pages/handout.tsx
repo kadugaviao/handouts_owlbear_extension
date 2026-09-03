@@ -22,6 +22,7 @@ import {
   broadcastShowHandout,
   closeHandoutPopover,
   getScreenSize,
+  onHandoutRevoked,
   pickImageFromOwlbear,
   resizeHandoutPopover,
 } from "../core/owlbear/client";
@@ -131,6 +132,13 @@ function App() {
 
   const { loading, isGM, error, findByUrl, saveHandout } = useHandouts();
   const { onResize, maxSize } = usePopoverAutoSize();
+
+  // O mestre pode retirar este handout enquanto ele está na tela. Quem escuta é
+  // esta janela, não o background: só ela sabe o que está mostrando.
+  useEffect(() => {
+    if (!imageUrl) return;
+    return onHandoutRevoked(imageUrl, () => void closeHandoutPopover());
+  }, [imageUrl]);
 
   if (loading) return null;
 

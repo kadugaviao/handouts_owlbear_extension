@@ -179,39 +179,54 @@ async function isFromGM(connectionId: string): Promise<boolean> {
   }
 }
 
-export function startHandoutListeners(): () => void {
-  // Qual handout este cliente tem aberto agora. Precisamos saber para que o
-  // "retirar" do handout A não feche o handout B que o jogador está lendo.
-  let openImageUrl: string | null = null;
-
+/**
+ * Ouve o "mostrar" e abre a janela. Roda na página de background.
+ *
+ * NÃO cuida do "retirar": quem sabe qual handout está na tela é a própria
+ * janela, e é ela que escuta — ver `onHandoutRevoked`.
+ *
+ * @returns função de unsubscribe.
+ */
+export function startShareListener(): () => void {
   // >>> OBR: recepção do "mostrar".
-  const unsubscribeShare = OBR.broadcast.onMessage(SHARE_CHANNEL, (event) => {
+  return OBR.broadcast.onMessage(SHARE_CHANNEL, (event) => {
     // `isSharePayload` já valida o esquema da URL (nada de javascript:/data:).
     if (!isSharePayload(event.data)) return;
     const payload = event.data;
-    void isFromGM(event.connectionId).then((fromGM) => {
-      if (!fromGM) return; // só o mestre manda abrir
-      openImageUrl = payload.imageUrl;
-      void openHandoutLocally(payload.imageUrl, payload.title);
-    });
+    isFromGM(event.connectionId)
+      .then((fromGM) => {
+        if (!fromGM) return; // só o mestre manda abrir
+        return openHandoutLocally(payload.imageUrl, payload.title);
+      })
+      .catch(() => undefined); // falhar em abrir não derruba o listener
   });
+}
 
+/**
+ * Ouve o "retirar" DESTE handout e avisa. Roda dentro da própria janela.
+ *
+ * POR QUE AQUI, E NÃO NO BACKGROUND: o background só sabia dos handouts que
+ * ele mesmo abriu por broadcast. Um jogador que abrisse um handout pela
+ * própria lista — o caso de quem entra no meio da sessão e encontra a lista
+ * cheia — ficava invisível para ele, e o "Retirar" do mestre não fechava nada.
+ * A janela, por outro lado, sempre sabe o que está mostrando.
+ *
+ * @returns função de unsubscribe.
+ */
+export function onHandoutRevoked(
+  imageUrl: string,
+  onRevoked: () => void,
+): () => void {
   // >>> OBR: recepção do "retirar".
-  const unsubscribeRevoke = OBR.broadcast.onMessage(REVOKE_CHANNEL, (event) => {
+  return OBR.broadcast.onMessage(REVOKE_CHANNEL, (event) => {
     if (!isRevokePayload(event.data)) return;
-    const payload = event.data;
-    void isFromGM(event.connectionId).then((fromGM) => {
-      if (!fromGM) return; // só o mestre manda fechar
-      if (openImageUrl !== payload.imageUrl) return; // é outro handout
-      openImageUrl = null;
-      void closeHandoutPopover();
-    });
+    if (event.data.imageUrl !== imageUrl) return; // é outro handout
+    isFromGM(event.connectionId)
+      .then((fromGM) => {
+        if (fromGM) onRevoked(); // só o mestre manda fechar
+      })
+      .catch(() => undefined);
   });
-
-  return () => {
-    unsubscribeShare();
-    unsubscribeRevoke();
-  };
 }
 
 /**

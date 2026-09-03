@@ -213,6 +213,20 @@ Ver B9.
 
 Ver B10 e B11.
 
+### Etapa 18 — Revisão arquivo a arquivo
+
+Auditoria completa antes de publicar. Achado um bug real (B21); o resto do
+código passou sem apontamentos.
+
+**Limpo:** nenhuma classe CSS órfã, nenhuma dependência sem uso, camadas
+respeitadas, nenhuma promessa sem tratamento nos caminhos de erro.
+
+**Documentação corrigida** — os READMEs de camada descreviam código removido:
+`ui/README` afirmava `max-height: 80vh` (retirado no B14, era a causa da
+espiral de morte) e que `Esc` não fechava; `core/README` dizia que
+`readHandouts` roda a cada mudança de metadata e que `checkBudget` é apenas
+memoizado. README que descreve código inexistente engana quem confia nele.
+
 ### Etapa 17 — Versionamento, CI, lint e licença
 
 **Versionamento.** Trabalho das Etapas 13–16 dividido em 5 commits, agrupados
@@ -581,6 +595,7 @@ Segurança endurecida nesta etapa: ver B12 e B13. Testes: 8 → 30.
 | B17 | **Broadcast saía mesmo com a gravação falhando** | `saveHandout` engolia o erro e devolvia `void`; o "liberar" emitia assim mesmo. O jogador via o handout na tela sem ele estar na lista, e ao fechar perdia o acesso sem entender | Mutações devolvem `boolean`; sem gravar, não emite |
 | B18 | **Texto digitado sumia ao falhar o salvamento** | `handleSave` sempre saía do modo de edição; o rascunho era resetado pelas props. Aparecia a mensagem de erro e o trabalho ia junto | Só sai da edição se gravou |
 | B19 | Excluir um handout liberado não fechava na tela do jogador | O "Retirar" emitia o broadcast de fechar; o excluir não | Excluir emite o mesmo broadcast quando o handout estava liberado |
+| B21 | **"Retirar" não fechava a janela que o jogador abriu sozinho** | O `openImageUrl` do background só era preenchido por broadcast de "mostrar". Um jogador que abrisse um handout pela própria lista — o caso de quem entra no meio da sessão e encontra a lista cheia — ficava invisível para o background, e a condição de guarda barrava o fechamento | O "retirar" passou a ser ouvido **dentro da janela** (`onHandoutRevoked`), que sempre sabe o que está mostrando. O background ficou só com o "mostrar" |
 | B20 | **Tela em branco permanente se a leitura inicial falhasse** | `Promise.all([getMetadata, getRole])` sem `catch`: `loading` ficava `true` para sempre, sem mensagem e sem log | `catch` + `finally`; a falha de leitura aparece na mesma faixa de erro da escrita |
 
 **Nota sobre B9:** os tutoriais oficiais do Owlbear foram escritos na era do

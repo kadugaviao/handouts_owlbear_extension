@@ -48,7 +48,7 @@ jogador nunca chega a segurar esses campos.
 | Arquivo | O que faz |
 |---|---|
 | `constants.ts` | IDs da extensão, canais e chaves de metadata |
-| `client.ts` | Popover, broadcast e biblioteca de imagens |
+| `client.ts` | Popover, broadcast e biblioteca de imagens. `startShareListener` roda no background; `onHandoutRevoked` roda dentro da janela |
 | `useHandouts.ts` | Persistência na metadata + filtro de visibilidade + orçamento |
 | `mount.ts` | Bootstrap com checagem de `OBR.isAvailable` |
 
