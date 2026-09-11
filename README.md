@@ -20,14 +20,30 @@ npm run dev
 A extensão é instalada no **perfil**, não dentro de uma sala:
 
 1. Abra [owlbear.app/profile](https://owlbear.app/profile)
-2. **Add Extension** → cole `http://localhost:5173/manifest.json`
+2. **Add Extension** → cole o endereço:
+
+   ```
+   https://handouts-owlbear-extension.pages.dev/manifest.json
+   ```
+
 3. Crie uma sala **habilitando a extensão** no diálogo de criação
 
 O passo 3 é fácil de esquecer: instalada mas não habilitada, ela não aparece.
 
-> `localhost` só funciona na máquina onde o servidor está rodando. No celular
-> ou em outro computador o Owlbear responde *"Não foi possível carregar a
-> extensão"* — é o que `localhost` significa. Resolve com o deploy.
+Esse endereço é permanente e funciona no celular, no computador do amigo, e com
+a sua máquina desligada. Os jogadores não instalam nada — a lista de extensões
+pertence à sala.
+
+### Para desenvolver
+
+Rodando `npm run dev`, use `http://localhost:5173/manifest.json` no lugar.
+Mantenha as duas instalações separadas no perfil e **remova a de `localhost`
+quando terminar** — senão o Owlbear tenta carregar um servidor que não existe
+mais.
+
+> `localhost` só existe na máquina onde o servidor está de pé. No celular,
+> `localhost` é o próprio celular, e o Owlbear responde *"Não foi possível
+> carregar a extensão"*. Não é defeito: é o que `localhost` significa.
 
 ## Testar o fluxo com jogadores
 
@@ -68,12 +84,13 @@ vira `https://abc123.ngrok-free.app/manifest.json`, e aí qualquer aparelho
 alcança.
 
 > O `vite.config.ts` já aceita os domínios de ngrok, Cloudflare Tunnel e
-> localtunnel em `allowedHosts` — sem isso o Vite 6 responde *"Blocked request.
+> localtunnel em `allowedHosts` — sem isso o Vite responde *"Blocked request.
 > This host is not allowed."* O endereço do ngrok muda a cada execução no plano
 > gratuito, então é preciso reinstalar a extensão a cada sessão.
 
-Para testes recorrentes com o grupo, compensa publicar (ver **Publicar** abaixo)
-em vez de manter um túnel.
+**Para testar a versão publicada em outro aparelho não é preciso nada disso:**
+o endereço de `pages.dev` já é HTTPS e público. O túnel só serve para exercitar
+uma alteração que ainda está na sua máquina.
 
 ## Comandos
 
@@ -169,21 +186,16 @@ página mostra um aviso explicando o que fazer.
 
 ---
 
-## Publicar
+## Publicação
 
-O projeto usa caminhos absolutos a partir da raiz (`/pages/handout.html`,
-`/pages/background.html`), então **precisa de um host que sirva na raiz**. O GitHub
-Pages serve em subpasta e quebraria todos eles.
+Publicado no **Cloudflare Pages**, em
+[handouts-owlbear-extension.pages.dev](https://handouts-owlbear-extension.pages.dev/manifest.json).
+O deploy sai a cada push na `main`; build `npm run build`, saída `dist`.
 
-| Host | Endereço | Raiz? |
-|---|---|---|
-| **Cloudflare Pages** *(recomendado)* | `projeto.pages.dev` | ✅ |
-| Netlify | `projeto.netlify.app` | ✅ |
-| Vercel | `projeto.vercel.app` | ✅ |
-| GitHub Pages | `usuario.github.io/repo/` | ❌ |
-
-Build `npm run build`, pasta de saída `dist`. Passo a passo em
-[`documents/spec.md`](documents/spec.md), seção P2.
+**Por que um host que sirva na raiz:** o projeto usa caminhos absolutos
+(`/pages/handout.html`, `/pages/background.html`, `/logo.svg`, `/icon.svg`). O
+GitHub Pages serve em subpasta (`usuario.github.io/repo/`) e quebraria todos —
+foi o que descartou essa opção. Netlify e Vercel serviriam igualmente bem.
 
 O `public/_headers` já define a política de cache para Cloudflare Pages e
 Netlify. O ponto crítico ali é o `manifest.json` em `no-cache`: é o endereço
@@ -194,7 +206,7 @@ instalou recebesse atualizações.
 
 ## Stack
 
-React 18 · TypeScript 5.7 · Vite 6 · Vitest 2 · ESLint 9 ·
+React 18 · TypeScript 5.7 · Vite 8 · Vitest 5 · ESLint 10 ·
 `@owlbear-rodeo/sdk` 3.1 · CSS Modules (sem framework — roda em iframe, peso
 importa).
 

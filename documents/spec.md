@@ -3,8 +3,9 @@
 **Fonte da verdade do projeto.** Registra o que foi decidido, o que foi
 construído, o que foi verificado de fato e o que falta.
 
-- Última atualização: **2026-08-31**
-- Estado: funcional em desenvolvimento, **não publicado**
+- Última atualização: **2026-09-11**
+- Estado: **publicado e funcional** em
+  [handouts-owlbear-extension.pages.dev](https://handouts-owlbear-extension.pages.dev/manifest.json)
 - Visão geral: `PROJETO.md` · Como rodar: `README.md`
 
 ---
@@ -212,6 +213,41 @@ Ver B9.
 ### Etapa 6 — Correção visual
 
 Ver B10 e B11.
+
+### Etapa 19 — O CI vira verificação de deploy, e a varredura que faltava
+
+Duas frentes, no mesmo período.
+
+**Correções (B22–B25).** Um bug relatado pelo usuário — "clico em adicionar e
+não acontece nada" — revelou que `OBR.viewport` rejeita numa sala sem cena, e
+que três caminhos distintos engoliam essa rejeição. A varredura atrás do mesmo
+defeito encontrou mais dois lugares (B25) e uma regra de privacidade sem teste
+(B24). A lição que fica: `void promessa()` numa ação de interface é uma falha
+que nunca chega ao usuário.
+
+**CI e CD.** O passo de fumaça não confere HTTP 200 — isso a versão anterior
+também devolve. Ele extrai `assets/main-*.js` do `dist` recém compilado e espera
+a produção servir o mesmo nome; como o nome carrega hash do conteúdo, bater
+prova que é **este** commit que está no ar. Depois confere `no-cache` e CORS no
+manifest.
+
+Fica explícito no próprio arquivo o que ele **não** é: o Cloudflare compila ao
+ver o push, sem consultar o Actions, então o passo detecta um deploy quebrado
+mas não o impede.
+
+Junto: `concurrency` com cancelamento, `permissions: contents: read`,
+`timeout-minutes`, e Dependabot semanal.
+
+**O Dependabot cobrou a primeira lição na hora.** A configuração inicial agrupou
+só as dependências de desenvolvimento, e o React 18→19 saiu partido em dois PRs
+— `react` num, `react-dom` noutro — que falharam os dois no `npm ci`. Agrupar
+não é só reduzir ruído: pacotes que só resolvem juntos precisam subir juntos.
+
+A segunda cobrança foi melhor ainda: o PR do ESLint 10 quebrou com
+`ERR_MODULE_NOT_FOUND` e expôs que `eslint.config.js` importava `@eslint/js` e
+`globals` sem que nenhum dos dois estivesse no `package.json`. Funcionavam por
+acaso, içados como dependência transitiva. Um import sem declaração é uma
+dependência que ninguém está segurando.
 
 ### Etapa 18 — Revisão arquivo a arquivo
 
@@ -599,6 +635,8 @@ Segurança endurecida nesta etapa: ver B12 e B13. Testes: 8 → 30.
 | B20 | **Tela em branco permanente se a leitura inicial falhasse** | `Promise.all([getMetadata, getRole])` sem `catch`: `loading` ficava `true` para sempre, sem mensagem e sem log | `catch` + `finally`; a falha de leitura aparece na mesma faixa de erro da escrita |
 | B22 | **A extensão inteira parava numa sala sem cena.** Escolher uma imagem da biblioteca não abria nada; clicar num item da lista, idem; o jogador não recebia handout compartilhado. Nenhuma mensagem, em lugar nenhum | `openHandoutLocally` lia `OBR.viewport.getWidth/getHeight` para centralizar a janela (a correção do B3). `OBR.viewport` mede a janela **da cena**: sem cena o Owlbear rejeita com `MissingDataError: No scene found`. Como `openHandoutLocally` é o caminho comum da biblioteca, da lista e do broadcast, uma informação **cosmética** derrubava tudo | A leitura do viewport virou `viewportCenter()`, que devolve `null` em vez de rejeitar; sem ele a âncora é omitida e o Owlbear posiciona a janela. Coberto por `src/core/owlbear/client.test.ts` |
 | B23 | **O B22 foi invisível por semanas** — o mestre clicava e não acontecia nada, sem erro na interface | `journal.tsx` fazia `void handleOpenFromLibrary()` e `void openHandoutLocally(...)`: a rejeição do SDK virava um `Uncaught (in promise)` só no console. Agravante: o Owlbear **não rejeita com `Error`**, rejeita com o objeto cru do `postMessage` (`{ name, message }`), então `e instanceof Error` também não pegava | `describeSdkError` em `core/owlbear/client.ts` lê as duas formas; as ações passaram a ter `catch` com contexto e a falha aparece na mesma faixa de erro do resto. Na página de background, que não tem interface, sobrou `console.error` |
+| B24 | **O filtro de visibilidade não tinha teste** — a regra que separa as anotações do mestre dos olhos do jogador passava sem cobertura | Ela vivia dentro de um `useMemo` em `useHandouts`, onde nenhum teste alcançava. `toPlayerHandout` e `isWorthStoring` eram testados isoladamente; a **composição** dos dois, que é onde mora a proteção, não. Provado por mutação: apagar o `.filter()` fazia todo handout anotado e não liberado aparecer para o jogador (o B4 de volta) e os 82 testes continuavam verdes | Extraída para `domain/visibleTo(handouts, isGM)`, camada pura, com 6 testes — um deles serializa a saída do jogador e verifica que nenhum texto do mestre sobrevive. As mesmas mutações agora derrubam 2 e 4 testes |
+| B25 | **A janela do handout engolia toda falha do SDK** — trocar a imagem pelo modo de edição não fazia nada, e um "Show to Players" podia não abrir na tela do jogador sem o mestre saber | A varredura do B23 parou no `journal.tsx`. `handout.tsx` entregava ao modal três chamadas cruas — `pickImageFromOwlbear`, `closeHandoutPopover` e os dois broadcasts — e o modal as envolve em `try/finally` **sem `catch`**, disparadas com `void`. O seletor de imagens é o mesmo sintoma relatado no B22, no segundo lugar onde aparece | O mesmo `actionError` + `report` do journal, ligado ao `writeError` que o modal já renderizava. No "liberar", mensagem específica: a gravação já passou, então a lista está certa e só o broadcast falhou |
 
 **Nota sobre B9:** os tutoriais oficiais do Owlbear foram escritos na era do
 Vite 4/5, quando `cors: true` era o padrão. Por isso não mencionam nada disso —
@@ -615,14 +653,15 @@ assim o navegador recusa.
 |---|---|---|
 | Tipagem | `npx tsc --noEmit` | ✅ limpa |
 | Build | `npm run build` | ✅ 3 bundles |
-| Testes | `npm test` | ✅ 68 passando |
+| Testes | `npm test` | ✅ 88 passando |
 | CDN redimensiona (`?width=`) | medido com URL real | ✅ ver Etapa 15 |
 | Manifest aponta para arquivos reais | `manifest.test.ts` | ✅ validado por mutação |
 | Camadas respeitadas | `architecture.test.ts` | ✅ |
 | Vulnerabilidades em produção | `npm audit --omit=dev` | ⚠️ 2 moderadas, sem correção disponível (ver abaixo) |
 | CORS liberado para o Owlbear | `curl -H "Origin: https://owlbear.app" …` | ✅ `Access-Control-Allow-Origin` presente |
 | CORS negado para terceiros | `curl -H "Origin: https://site-qualquer…" …` | ✅ sem cabeçalho |
-| Entradas servidas | `curl` em `/`, `/handout.html`, `/background.html`, `/manifest.json` | ✅ HTTP 200 |
+| Entradas servidas | `curl` em `/`, `/pages/handout.html`, `/pages/background.html`, `/manifest.json` | ✅ HTTP 200 **em produção**, a cada push (passo de fumaça do CI) |
+| O commit chegou ao ar | CI compara o hash do bundle com o que a produção serve | ✅ automático |
 | Capacidade de armazenamento | script de medição | ✅ números da [§4](#4-histórico-do-que-foi-construído) |
 | Peso por página | análise do `dist/` | ✅ tabela abaixo |
 
@@ -716,21 +755,20 @@ Em ordem de risco:
 
 ## 7. Trabalho pendente
 
-### P1 — Testar o fluxo do jogador *(prioridade máxima)*
+### P1 — Testes manuais que faltam
+
+O roteiro abaixo já foi percorrido uma vez (2026-08-31, ver §6), mas **antes**
+das correções B22–B25. Os passos 1, 4 e 8 mudaram de comportamento desde então e
+precisam de nova passagem.
 
 **Como montar o ambiente.** O jogador não instala nada: a lista de extensões
-pertence à sala, e o cliente dele carrega sozinho ao entrar (confirmado na
-prática — um celular que só entrou pelo convite já tentou carregar a extensão).
-O requisito é a URL do manifest ser alcançável do aparelho dele.
+pertence à sala, e o cliente dele carrega sozinho ao entrar. Com a extensão
+publicada, o endereço do manifest já é alcançável de qualquer aparelho — duas
+janelas do navegador (uma anônima como jogador) bastam, e o celular funciona
+sem túnel.
 
-- **Mesma máquina** *(suficiente para este roteiro)*: duas janelas do
-  navegador, uma normal como mestre e uma anônima como jogador. Ambas resolvem
-  `localhost` para o mesmo servidor. Zero configuração.
-- **Outro aparelho**: `localhost` aponta para o próprio aparelho. O IP da rede
-  local **não resolve** — `http://192.168.x.x` é bloqueado como conteúdo misto
-  numa página HTTPS; só `localhost` e `127.0.0.1` são origens confiáveis. A
-  porta é irrelevante. A saída é um túnel HTTPS (`ngrok http 5173`), já
-  contemplado em `server.allowedHosts` no `vite.config.ts`.
+O túnel (`ngrok http 5173`, contemplado em `server.allowedHosts`) só é
+necessário para exercitar uma alteração que ainda não foi publicada.
 
 Roteiro:
 
@@ -743,31 +781,23 @@ Roteiro:
 7. Mestre: Retirar → a janela do jogador fecha na hora e some da lista dele
 8. Mestre: Exportar → baixa o JSON (ou cai no fallback de copiar)
 
-### P2 — Publicar
+**O passo 8 é o que mais importa hoje**, e é o único que o código não consegue
+responder sozinho: um iframe com sandbox restritivo bloqueia o download **sem
+lançar exceção**, então `downloadBackup` devolve `true` e o textarea de
+emergência nunca aparece. Só olhando a pasta de downloads dá para saber se o
+backup existe. O resultado decide a correção (ver P5).
 
-Enquanto viver em `localhost`, a extensão só funciona na máquina do
-desenvolvedor com o servidor rodando. Confirmado na prática: no celular o
-Owlbear responde *"Não foi possível carregar a extensão: localhost"*, porque
-`localhost` no celular é o próprio celular.
+### ~~P2 — Publicar~~ ✅ concluído
 
-**Restrição que decide o host:** 5 caminhos absolutos a partir da raiz —
-`/logo.svg`, `/icon.svg`, `/` e `/pages/background.html` no `manifest.json`, e
-`/pages/handout.html` em `core/owlbear/client.ts`. Um host que sirva em
-subpasta quebra todos.
+Cloudflare Pages, em
+[handouts-owlbear-extension.pages.dev](https://handouts-owlbear-extension.pages.dev/manifest.json).
+Deploy a cada push na `main`. A restrição dos 5 caminhos absolutos continua
+valendo: um host que sirva em subpasta quebraria todos.
 
-| Host | Endereço | Raiz? | Custo |
-|---|---|---|---|
-| **Cloudflare Pages** *(recomendado)* | `projeto.pages.dev` | ✅ | grátis, banda ilimitada, sem cartão |
-| Netlify | `projeto.netlify.app` | ✅ | grátis, 100 GB/mês |
-| Vercel | `projeto.vercel.app` | ✅ | grátis (hobby) |
-| GitHub Pages | `usuario.github.io/repo/` | ❌ subpasta | grátis, mas exige `base` no Vite e caminhos relativos |
-
-Passos: `git init` e subir para o GitHub → conectar no Cloudflare Pages → build
-`npm run build`, saída `dist` → link de instalação vira
-`https://algo.pages.dev/manifest.json`.
-
-Depois do deploy, os jogadores não precisam de nada rodando: o endereço é
-permanente e funciona com o computador do mestre desligado.
+**O que o deploy NÃO fechou:** o Cloudflare compila ao ver o push, em paralelo e
+sem consultar o GitHub Actions. O CI detecta um deploy quebrado (Etapa 19), mas
+não o impede — para isso o deploy teria que migrar para o workflow, com um token
+de API.
 
 ### ~~P3 — Inicializar o Git~~ ✅ concluído
 
@@ -788,8 +818,16 @@ vale (outro jogador com DevTools leria).
   centralizado com bastante espaço branco em volta. Encolher o card até a
   largura da imagem é uma opção.
 - Acessibilidade do modal: o foco ainda não fica preso dentro dele (`Esc` já fecha).
-- Sem lint configurado (ESLint + Prettier).
-- Sem CI — os testes e o build rodam só localmente.
+- **Interface sem teste.** `HandoutList`, `HandoutModal`, `journal.tsx`,
+  `handout.tsx` e `mount.ts` não têm cobertura. Foi por isso que os B24 e B25
+  precisaram ser achados por leitura, e não pela suíte. É a maior lacuna que
+  resta.
+- **`downloadBackup` não detecta o que promete.** O bloqueio de download num
+  iframe com sandbox é silencioso — não lança —, então o `try/catch` devolve
+  `true` e o textarea de emergência nunca aparece. Não tem conserto por
+  detecção: ou sempre se oferece a cópia, ou se aceita o risco. Depende do teste
+  manual nº 4 abaixo.
+- O botão "Copiar" do fallback de exportação não dá retorno visual.
 
 ---
 

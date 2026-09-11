@@ -18,19 +18,19 @@ anota o que quiser, e libera para os jogadores com um clique.
 |---|---|
 | Compilação (`tsc --noEmit`) | ✅ limpa |
 | Build (`npm run build`) | ✅ 3 bundles |
-| Testes (`npm test`) | ✅ 68 passando |
+| Testes (`npm test`) | ✅ 88 passando |
 | Rodando no Owlbear | ✅ confirmado pelo mestre |
 | Testado com jogador real | ✅ liberar, reabrir e retirar validados em segunda tela |
-| Publicado (deploy) | ❌ só `localhost` |
+| Publicado (deploy) | ✅ [handouts-owlbear-extension.pages.dev](https://handouts-owlbear-extension.pages.dev/manifest.json) |
 | Repositório Git | ✅ [kadugaviao/handouts_owlbear_extension](https://github.com/kadugaviao/handouts_owlbear_extension), público |
-| CI (GitHub Actions) | ✅ lint + testes + build a cada push |
+| CI (GitHub Actions) | ✅ lint + testes + build, e confirmação de que o commit chegou ao ar |
+| Dependências | ✅ Dependabot semanal, agrupado |
 | Licença | ✅ MIT |
 
-**Consequência imediata do "só localhost":** a extensão só existe enquanto o
-`npm run dev` está de pé na máquina do desenvolvedor. Num celular ou em outro
-computador, `localhost` aponta para o próprio aparelho e o Owlbear responde
-*"Não foi possível carregar a extensão: localhost"*. Isso não é defeito — é o
-que `localhost` significa. Resolve-se com o deploy (seção 6).
+**O que o deploy mudou:** a extensão deixou de depender do `npm run dev` na
+máquina do desenvolvedor. O endereço é permanente, funciona no celular e com o
+computador do mestre desligado. Os jogadores nunca instalaram nada — a lista de
+extensões pertence à sala.
 
 ---
 
@@ -155,25 +155,22 @@ Se algo for realmente secreto, o lugar dele não é a extensão.
 
 ---
 
-## 6. Próximo passo: publicar
+## 6. Publicação
 
-Enquanto viver em `localhost`, a extensão só funciona na máquina do
-desenvolvedor com o servidor rodando. Para o resto do mundo (e para o celular)
-ela precisa de um endereço HTTPS público.
+No **Cloudflare Pages**, em
+[handouts-owlbear-extension.pages.dev](https://handouts-owlbear-extension.pages.dev/manifest.json).
+Cada push na `main` dispara um build novo.
 
-**O detalhe que decide o host:** o projeto usa 5 caminhos absolutos a partir da
-raiz — `/logo.svg`, `/icon.svg`, `/`, `/background.html` (no `manifest.json`) e
-`/pages/handout.html` (em `core/owlbear/client.ts`). O GitHub Pages serve numa subpasta
-(`usuario.github.io/repo/`) e quebraria todos eles.
+**O detalhe que decidiu o host:** o projeto usa 5 caminhos absolutos a partir da
+raiz — `/logo.svg`, `/icon.svg`, `/`, `/pages/background.html` (no
+`manifest.json`) e `/pages/handout.html` (em `core/owlbear/client.ts`). O GitHub
+Pages serve numa subpasta (`usuario.github.io/repo/`) e quebraria todos eles.
+Netlify e Vercel serviriam igualmente bem; o Cloudflare entrou pela banda
+ilimitada e por não pedir cartão.
 
-| Host | Endereço | Raiz? | Custo |
-|---|---|---|---|
-| **Cloudflare Pages** *(recomendado)* | `projeto.pages.dev` | ✅ | grátis, banda ilimitada |
-| Netlify | `projeto.netlify.app` | ✅ | grátis, 100 GB/mês |
-| Vercel | `projeto.vercel.app` | ✅ | grátis (hobby) |
-| GitHub Pages | `usuario.github.io/repo/` | ❌ | grátis, mas exige ajustar os 5 caminhos |
-
-Detalhes e passo a passo em `documents/spec.md`, seção "Trabalho pendente".
+O `public/_headers` carrega a política de cache. O ponto crítico é o
+`manifest.json` em `no-cache`: é o endereço que o Owlbear guardou de quem já
+instalou, e cacheado impediria que essas pessoas recebessem atualizações.
 
 ---
 
@@ -184,7 +181,7 @@ Detalhes e passo a passo em `documents/spec.md`, seção "Trabalho pendente".
 | `@owlbear-rodeo/sdk` | 3.1.0 | comunicação com o Owlbear |
 | `react` / `react-dom` | 18.3 | interface |
 | `lucide-react` | 0.469 | ícones |
-| `vite` | 6.4 | build e servidor de desenvolvimento |
+| `vite` | 8.2 | build e servidor de desenvolvimento |
 | `typescript` | 5.7 | tipagem |
 | `vitest` | 2.1 | testes |
 
