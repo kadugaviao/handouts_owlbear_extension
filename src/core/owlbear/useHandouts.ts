@@ -12,11 +12,12 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import OBR, { type Metadata } from "@owlbear-rodeo/sdk";
+import { describeSdkError } from "./client";
 import { HANDOUTS_METADATA_KEY } from "./constants";
 import {
   isWorthStoring,
   parseHandout,
-  toPlayerHandout,
+  visibleTo,
   type Handout,
 } from "../domain/handout";
 import {
@@ -108,9 +109,10 @@ function useRoomHandouts() {
       })
       .catch((e: unknown) => {
         if (!active) return;
+        const detalhe = describeSdkError(e);
         setLoadError(
-          e instanceof Error
-            ? `Não foi possível ler o journal da sala: ${e.message}`
+          detalhe
+            ? `Não foi possível ler o journal da sala: ${detalhe}`
             : "Não foi possível ler o journal da sala.",
         );
       })
@@ -178,18 +180,19 @@ export function useHandouts(): UseHandouts {
       setWriteError(null);
       return true;
     } catch (e) {
+      // O Owlbear rejeita com `{ name, message }` cru, não com `Error`: um
+      // `instanceof` mandava toda falha de escrita para o texto genérico (B23).
       setWriteError(
-        e instanceof Error ? e.message : "Não foi possível salvar o journal.",
+        describeSdkError(e) || "Não foi possível salvar o journal.",
       );
       return false;
     }
   }, []);
 
   // ---- O FILTRO DE VISIBILIDADE ----
-  const handouts = useMemo(() => {
-    if (isGM) return raw;
-    return raw.filter((h) => h.sharedWithPlayers).map(toPlayerHandout);
-  }, [raw, isGM]);
+  // A regra mora em `domain/visibleTo`, coberta por teste. Aqui ela só é
+  // aplicada: dentro deste `useMemo` nenhum teste a alcançava.
+  const handouts = useMemo(() => visibleTo(raw, isGM), [raw, isGM]);
 
   const findByUrl = useCallback(
     (imageUrl: string) => handouts.find((h) => h.imageUrl === imageUrl),
