@@ -10,6 +10,7 @@ import {
   parseHandout,
   toPlayerHandout,
   untrackedHandout,
+  visibleTo,
 } from "./handout";
 
 const IMG = "https://images.owlbear.rodeo/abc.png";
@@ -54,6 +55,60 @@ describe("toPlayerHandout — o corte de visibilidade", () => {
     expect(doJogador.notes).toBe("");
     expect(doJogador.title).toBe("Goblin");
     expect(doJogador.imageUrl).toBe(IMG);
+  });
+});
+
+describe("visibleTo — a fronteira de privacidade", () => {
+  const anotadoSemLiberar = {
+    imageUrl: IMG,
+    title: "Carta do vilão",
+    description: "o vilão é o irmão do rei",
+    notes: "revelar na sessão 8",
+    sharedWithPlayers: false,
+  };
+  const liberado = {
+    imageUrl: "https://images.owlbear.rodeo/mapa.png",
+    title: "Mapa",
+    description: "há uma passagem secreta",
+    notes: "só se rolarem 15+",
+    sharedWithPlayers: true,
+  };
+
+  it("o mestre vê tudo, sem corte", () => {
+    expect(visibleTo([anotadoSemLiberar, liberado], true)).toEqual([
+      anotadoSemLiberar,
+      liberado,
+    ]);
+  });
+
+  // ESTE É O TESTE QUE IMPORTA. Um handout anotado EXISTE na metadata da sala,
+  // e o cliente do jogador recebe a metadata inteira. Só este filtro separa as
+  // anotações do mestre dos olhos dele. Apagá-lo reintroduz o B4.
+  it("o jogador não recebe o que foi anotado mas não liberado", () => {
+    const doJogador = visibleTo([anotadoSemLiberar, liberado], false);
+    expect(doJogador).toHaveLength(1);
+    expect(doJogador[0].imageUrl).toBe(liberado.imageUrl);
+  });
+
+  it("o que o jogador recebe vem sem descrição e sem notas", () => {
+    const [único] = visibleTo([anotadoSemLiberar, liberado], false);
+    expect(único.description).toBe("");
+    expect(único.notes).toBe("");
+    expect(único.title).toBe("Mapa");
+  });
+
+  it("nenhum texto do mestre sobrevive na saída do jogador", () => {
+    const serializado = JSON.stringify(
+      visibleTo([anotadoSemLiberar, liberado], false),
+    );
+    expect(serializado).not.toContain("irmão do rei");
+    expect(serializado).not.toContain("passagem secreta");
+    expect(serializado).not.toContain("sessão 8");
+    expect(serializado).not.toContain("15+");
+  });
+
+  it.each([true, false])("lista vazia continua vazia (mestre: %s)", (isGM) => {
+    expect(visibleTo([], isGM)).toEqual([]);
   });
 });
 

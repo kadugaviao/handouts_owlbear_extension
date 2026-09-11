@@ -87,6 +87,28 @@ export function toPlayerHandout(handout: Handout): Handout {
 }
 
 /**
+ * A LISTA QUE ESTE CLIENTE PODE VER.
+ *
+ * Duas operações que só valem juntas: descartar o que não foi liberado, e
+ * podar os campos do mestre do que sobrou. `toPlayerHandout` sozinho não
+ * protege nada — ele limpa o conteúdo, mas um handout anotado e NÃO liberado
+ * ainda apareceria na lista do jogador com o título à mostra.
+ *
+ * Mora em `domain/` de propósito. Esta decisão viveu dentro de um `useMemo` no
+ * hook, onde nenhum teste a alcançava: apagar o `.filter()` mantinha a suíte
+ * inteira verde enquanto as anotações do mestre vazavam (B4). Regra de
+ * privacidade pertence à camada pura, onde dá para provar que funciona.
+ *
+ * Vale lembrar o que isto NÃO é: a metadata da sala chega inteira ao cliente
+ * do jogador, e quem abrir o DevTools lê tudo. Isto é privacidade de
+ * interface (D4), não sigilo.
+ */
+export function visibleTo(handouts: Handout[], isGM: boolean): Handout[] {
+  if (isGM) return handouts;
+  return handouts.filter((h) => h.sharedWithPlayers).map(toPlayerHandout);
+}
+
+/**
  * Normaliza um objeto vindo da metadata ou de um JSON importado.
  * Aceita o formato antigo, que usava um `id` gerado por nós.
  */
