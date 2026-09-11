@@ -21,8 +21,25 @@ updates:
     commit-message:
       prefix: chore
       prefix-development: chore
-    # As atualizações de desenvolvimento chegam juntas: elas não alcançam o
-    # navegador do jogador, e uma a uma seriam dez PRs por mês.
+    # AGRUPAR NÃO É SÓ REDUZIR RUÍDO: pacotes que só resolvem juntos precisam
+    # subir no mesmo PR. A primeira rodada provou isso — o React 18→19 saiu
+    # partido em dois PRs, `react` num e `react-dom` no outro, e os dois
+    # falharam no `npm ci` com ERESOLVE porque cada metade exige a outra.
+    #
+    # Um pacote entra no PRIMEIRO grupo cuja regra ele casa, então a ordem
+    # aqui importa: a família do React vem antes do grupo genérico.
     groups:
+      react:
+        patterns:
+          - react
+          - react-dom
+          - "@types/react"
+          - "@types/react-dom"
+
       desenvolvimento:
         dependency-type: development
+        # `typescript` sai do grupo de propósito. Ele arrasta o peer do
+        # `typescript-eslint` junto, e no grupo fez um PR de sete atualizações
+        # inteiro falhar por causa de um membro só. Sozinho, ele falha sozinho.
+        exclude-patterns:
+          - typescript
