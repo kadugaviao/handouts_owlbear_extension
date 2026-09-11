@@ -6,9 +6,23 @@ on:
   pull_request:
     branches: [main]
 
+# Um push novo torna o anterior irrelevante: cancelar libera o runner e evita
+# esperar por um resultado de código que já foi substituído.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# O padrão do GITHUB_TOKEN concede escrita. Este job só lê o repositório e
+# compila; declarar o mínimo limita o estrago se alguma action for comprometida.
+permissions:
+  contents: read
+
 jobs:
   verificar:
     runs-on: ubuntu-latest
+    # Um job travado ficaria de pé até o teto de 6 horas do GitHub. Folga para
+    # os até 5 minutos de espera pelo deploy no último passo.
+    timeout-minutes: 15
 
     steps:
       - uses: actions/checkout@v5
@@ -33,3 +47,61 @@ jobs:
       # está inclusa, então não há passo separado de tsc.
       - name: Build
         run: npm run build
+
+      # ATENÇÃO AO QUE ESTE PASSO É E AO QUE ELE NÃO É.
+      #
+      # O Cloudflare Pages compila por conta própria ao ver o push, em paralelo
+      # com este workflow. Ele não consulta o GitHub Actions. Ou seja: este
+      # passo DETECTA um deploy quebrado, não o IMPEDE — quando ele roda, o
+      # código já está no ar. Fechar esse portão de verdade exige mover o deploy
+      # para cá com `cloudflare/wrangler-action` e um token de API.
+      #
+      # Mesmo assim paga: a última depuração séria do projeto começou com vinte
+      # minutos de `curl` manual perguntando "o deploy está saudável?".
+      - name: Confirmar que o commit chegou ao ar
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          BASE: https://handouts-owlbear-extension.pages.dev
+        run: |
+          set -euo pipefail
+
+          # Os nomes em /assets/ carregam hash do conteúdo. Se a produção serve
+          # o mesmo nome que este build gerou, é este commit que está no ar —
+          # prova mais forte que um HTTP 200, que a versão velha também devolve.
+          bundle() { grep -o 'assets/main-[A-Za-z0-9_-]*\.js' | sort -u | head -1; }
+
+          ESPERADO=$(bundle < dist/index.html || true)
+          if [ -z "$ESPERADO" ]; then
+            echo "::error::Não achei o bundle em dist/index.html. O build mudou de formato?"
+            exit 1
+          fi
+          echo "Esperando por $ESPERADO"
+
+          SERVIDO=""
+          for _ in $(seq 1 30); do
+            SERVIDO=$(curl -fsS "$BASE/" 2>/dev/null | bundle || true)
+            [ "$SERVIDO" = "$ESPERADO" ] && break
+            echo "  ainda em ${SERVIDO:-(sem resposta)}"
+            sleep 10
+          done
+
+          if [ "$SERVIDO" != "$ESPERADO" ]; then
+            echo "::error::A produção continua em $SERVIDO após 5 minutos."
+            echo "::error::O build do Cloudflare Pages falhou ou está atrasado."
+            exit 1
+          fi
+
+          # O manifest é o endereço que o Owlbear guardou de quem já instalou.
+          # Se ele cair, ou for cacheado, ninguém recebe atualização — e o
+          # sintoma ("atualizei e nada mudou") não aponta para a causa.
+          curl -fsS -D cabecalhos.txt -o /dev/null \
+            -H "Origin: https://owlbear.app" "$BASE/manifest.json"
+          grep -qi '^cache-control:.*no-cache' cabecalhos.txt \
+            || { echo "::error::manifest.json sem no-cache"; cat cabecalhos.txt; exit 1; }
+          grep -qi '^access-control-allow-origin:' cabecalhos.txt \
+            || { echo "::error::manifest.json sem CORS"; cat cabecalhos.txt; exit 1; }
+
+          # As três entradas do build. `-f` já faz o curl falhar em 4xx/5xx.
+          for p in / /pages/handout.html /pages/background.html; do
+            curl -fsSL -o /dev/null -w "$p %{http_code}\n" "$BASE$p"
+          done

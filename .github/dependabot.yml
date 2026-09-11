@@ -1,0 +1,28 @@
+# Atualizações de dependência como pull request, para não descobrir que algo
+# envelheceu só quando quebra.
+#
+# Semanal, e não diário, porque cada PR pede revisão: num projeto de uma pessoa,
+# ruído demais vira PR ignorado, que é pior que nenhum aviso.
+version: 2
+
+updates:
+  # As versões das actions no ci.yml (`@v5`) não se atualizam sozinhas.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: ci
+
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    commit-message:
+      prefix: chore
+      prefix-development: chore
+    # As atualizações de desenvolvimento chegam juntas: elas não alcançam o
+    # navegador do jogador, e uma a uma seriam dez PRs por mês.
+    groups:
+      desenvolvimento:
+        dependency-type: development
