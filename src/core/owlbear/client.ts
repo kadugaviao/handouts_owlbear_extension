@@ -193,13 +193,6 @@ export async function broadcastHideHandout(imageUrl: string): Promise<void> {
 }
 
 /**
- * Registra os listeners que reagem ao mestre. Roda na página de
- * `background_url`, não no popover: se vivesse no popover, um jogador com o
- * popover fechado nunca receberia nada — e esse é o caso normal.
- *
- * @returns função de unsubscribe.
- */
-/**
  * O emissor desta mensagem é o mestre?
  *
  * O SDK do Owlbear NÃO restringe quem pode emitir num canal de broadcast. Sem

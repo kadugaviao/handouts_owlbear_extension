@@ -21,6 +21,7 @@ import {
   broadcastHideHandout,
   broadcastShowHandout,
   closeHandoutPopover,
+  describeSdkError,
   getScreenSize,
   onHandoutRevoked,
   pickImageFromOwlbear,
@@ -133,12 +134,33 @@ function App() {
   const { loading, isGM, error, findByUrl, saveHandout } = useHandouts();
   const { onResize, maxSize } = usePopoverAutoSize();
 
+  // Falha de uma AÇÃO desta janela, separada do `error` do hook (que é sobre
+  // ler/gravar a metadata). Sem isto, toda chamada ao SDK daqui falhava calada
+  // — o mesmo defeito do B23, que corrigimos no journal e esquecemos aqui.
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  const report = useCallback((contexto: string, e: unknown) => {
+    const detalhe = describeSdkError(e);
+    setActionError(detalhe ? `${contexto} (${detalhe})` : contexto);
+  }, [setActionError]);
+
+  // `useCallback` não é enfeite: o modal tem `onClose` num array de
+  // dependências, e uma função nova a cada render reinstalaria o listener de
+  // teclado sem parar.
+  const handleClose = useCallback(async () => {
+    try {
+      await closeHandoutPopover();
+    } catch (e) {
+      report("Não foi possível fechar a janela.", e);
+    }
+  }, [report]);
+
   // O mestre pode retirar este handout enquanto ele está na tela. Quem escuta é
   // esta janela, não o background: só ela sabe o que está mostrando.
   useEffect(() => {
     if (!imageUrl) return;
-    return onHandoutRevoked(imageUrl, () => void closeHandoutPopover());
-  }, [imageUrl]);
+    return onHandoutRevoked(imageUrl, () => void handleClose());
+  }, [imageUrl, handleClose]);
 
   if (loading) return null;
 
@@ -153,7 +175,8 @@ function App() {
         canEdit={false}
         onResize={onResize}
         maxSize={maxSize}
-        onClose={closeHandoutPopover}
+        writeError={actionError}
+        onClose={handleClose}
       />
     );
   }
@@ -174,6 +197,7 @@ function App() {
    *            + broadcast de "esconder"       (fecha o que estiver aberto)
    */
   async function handleToggleShare() {
+    setActionError(null);
     const nextShared = !handout.sharedWithPlayers;
     const saved = await saveHandout({
       ...handout,
@@ -184,10 +208,33 @@ function App() {
     // e ao fechar, perdia o acesso sem entender por quê.
     if (!saved) return;
 
-    if (nextShared) {
-      await broadcastShowHandout(handout.imageUrl, handout.title);
-    } else {
-      await broadcastHideHandout(handout.imageUrl);
+    // A gravação já passou: a lista do jogador está certa. Se o broadcast
+    // falhar agora, o estado NÃO está errado — só não pulou na tela. Dizer
+    // exatamente isso, porque o mestre precisa saber que não adianta esperar.
+    try {
+      if (nextShared) {
+        await broadcastShowHandout(handout.imageUrl, handout.title);
+      } else {
+        await broadcastHideHandout(handout.imageUrl);
+      }
+    } catch (e) {
+      report(
+        nextShared
+          ? "Liberado na lista, mas não abriu na tela dos jogadores."
+          : "Retirado da lista, mas pode continuar aberto na tela deles.",
+        e,
+      );
+    }
+  }
+
+  /** O seletor de imagens do Owlbear é uma chamada ao SDK: pode recusar. */
+  async function handlePickImage() {
+    setActionError(null);
+    try {
+      return await pickImageFromOwlbear();
+    } catch (e) {
+      report("Não foi possível abrir a biblioteca de imagens do Owlbear.", e);
+      return null;
     }
   }
 
@@ -199,14 +246,14 @@ function App() {
       notes={handout.notes}
       sharedWithPlayers={handout.sharedWithPlayers}
       canEdit={isGM}
-      writeError={error}
+      writeError={actionError ?? error}
       onResize={onResize}
       maxSize={maxSize}
       onToggleShare={isGM ? handleToggleShare : undefined}
       // >>> OBR: fecha só aqui, sem tocar na sala.
-      onClose={closeHandoutPopover}
+      onClose={handleClose}
       onSave={isGM ? (patch) => saveHandout({ ...handout, ...patch }) : undefined}
-      onPickImage={isGM ? pickImageFromOwlbear : undefined}
+      onPickImage={isGM ? handlePickImage : undefined}
     />
   );
 }
