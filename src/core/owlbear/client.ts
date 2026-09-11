@@ -19,6 +19,27 @@ import {
 } from "../domain/handout";
 
 /**
+ * Mensagem legível de uma rejeição do SDK, ou string vazia.
+ *
+ * O Owlbear NÃO rejeita com `Error`: o `MessageBus` faz `reject(error)` com o
+ * objeto cru que chegou pelo `postMessage`. Foi assim que veio
+ * `{ name: "MissingDataError", message: "No scene found" }` — e um
+ * `e instanceof Error` não enxerga isso, que é como esse erro passou meses
+ * invisível.
+ *
+ * Mora nesta camada porque é conhecimento sobre o SDK; a interface não precisa
+ * saber o formato de erro do Owlbear.
+ */
+export function describeSdkError(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "object" && error !== null && "message" in error) {
+    const { message } = error as { message: unknown };
+    if (typeof message === "string") return message;
+  }
+  return "";
+}
+
+/**
  * Monta a URL do popover.
  *
  * A imagem e o título viajam NA PRÓPRIA URL. Isso é deliberado: a janela
@@ -32,6 +53,30 @@ function handoutPopoverUrl(imageUrl: string, title: string): string {
 }
 
 /**
+ * Centro da janela do Owlbear, ou `null` quando não dá para saber.
+ *
+ * `OBR.viewport` mede a janela DA CENA. Numa sala que ainda não tem cena
+ * aberta ele rejeita com `MissingDataError: No scene found` — e essa rejeição
+ * derrubava a extensão inteira, porque `openHandoutLocally` é o caminho comum
+ * da biblioteca, da lista e do handout recebido de outro jogador.
+ *
+ * A posição é COSMÉTICA. Falhar em centralizar não pode impedir a janela de
+ * abrir.
+ */
+async function viewportCenter(): Promise<{ left: number; top: number } | null> {
+  try {
+    // >>> OBR: dimensões da janela da cena.
+    const [width, height] = await Promise.all([
+      OBR.viewport.getWidth(),
+      OBR.viewport.getHeight(),
+    ]);
+    return { left: Math.round(width / 2), top: Math.round(height / 2) };
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Abre o handout no cliente LOCAL. Não emite nada para a sala.
  *
  * Detalhes de posicionamento que importam:
@@ -40,17 +85,15 @@ function handoutPopoverUrl(imageUrl: string, title: string): string {
  *    aninhados.
  *  - `disableClickAway: true` impede que um clique no mapa feche o handout que
  *    o mestre acabou de mostrar. Só o "X" fecha.
- *  - Sem âncora explícita o popover cola no canto da tela; ancoramos no centro
- *    do viewport.
+ *  - Com o centro conhecido, ancoramos ali. Sem ele, omitimos a âncora e
+ *    deixamos o Owlbear escolher: a janela nasce num canto, mas nasce. Chutar
+ *    coordenadas poderia colocá-la fora da tela.
  */
 export async function openHandoutLocally(
   imageUrl: string,
   title: string,
 ): Promise<void> {
-  const [viewportWidth, viewportHeight] = await Promise.all([
-    OBR.viewport.getWidth(),
-    OBR.viewport.getHeight(),
-  ]);
+  const center = await viewportCenter();
 
   // >>> OBR: abre um popover flutuante sobre o mapa, no cliente local.
   await OBR.popover.open({
@@ -58,13 +101,14 @@ export async function openHandoutLocally(
     url: handoutPopoverUrl(imageUrl, title),
     width: HANDOUT_POPOVER_SIZE.width,
     height: HANDOUT_POPOVER_SIZE.height,
-    anchorReference: "POSITION",
-    anchorPosition: {
-      left: Math.round(viewportWidth / 2),
-      top: Math.round(viewportHeight / 2),
-    },
-    anchorOrigin: { horizontal: "CENTER", vertical: "CENTER" },
-    transformOrigin: { horizontal: "CENTER", vertical: "CENTER" },
+    ...(center
+      ? {
+          anchorReference: "POSITION" as const,
+          anchorPosition: center,
+          anchorOrigin: { horizontal: "CENTER" as const, vertical: "CENTER" as const },
+          transformOrigin: { horizontal: "CENTER" as const, vertical: "CENTER" as const },
+        }
+      : {}),
     hidePaper: true,
     disableClickAway: true,
   });
@@ -198,7 +242,15 @@ export function startShareListener(): () => void {
         if (!fromGM) return; // só o mestre manda abrir
         return openHandoutLocally(payload.imageUrl, payload.title);
       })
-      .catch(() => undefined); // falhar em abrir não derruba o listener
+      .catch((e: unknown) => {
+        // A página de background não tem interface: engolir em silêncio aqui
+        // significava um jogador que simplesmente não recebe o handout, sem
+        // pista nenhuma. O listener continua vivo, mas deixa rastro.
+        console.error(
+          "[handouts] não foi possível abrir o handout recebido:",
+          describeSdkError(e) || e,
+        );
+      });
   });
 }
 
