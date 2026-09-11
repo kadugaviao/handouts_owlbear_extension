@@ -11,6 +11,7 @@ const ROOT = process.cwd();
 const manifest = JSON.parse(
   readFileSync(join(ROOT, "public", "manifest.json"), "utf8"),
 );
+const pkg = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8"));
 
 /**
  * Um caminho do manifest existe? Pode ser um arquivo estático de `public/`,
@@ -48,6 +49,13 @@ describe("manifest.json respeita os limites do Owlbear", () => {
 
   it("declara manifest_version", () => {
     expect(manifest.manifest_version).toBe(1);
+  });
+
+  // A versão está escrita em dois arquivos. Duas cópias de um mesmo dado
+  // divergem — é questão de tempo — e a do manifest é a que o Owlbear mostra
+  // para quem instalou.
+  it("a versão acompanha a do package.json", () => {
+    expect(manifest.version).toBe(pkg.version);
   });
 
   it("só usa nomes de permissão que o Owlbear aceita", () => {
