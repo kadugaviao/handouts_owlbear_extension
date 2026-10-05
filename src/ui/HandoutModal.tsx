@@ -234,7 +234,13 @@ export function HandoutModal({
   return (
     <div
       ref={modalRef}
-      className={`${styles.modal} ${zoomed ? styles.zoomed : ""}`}
+      /* `settled` é o mesmo sinal que libera o redimensionamento: o card só
+         aparece quando já está no tamanho final, em vez de piscar vazio,
+         crescer e assentar. Serve também quando não há imagem — `settled`
+         é marcado nos três caminhos (carregou, falhou, não existe). */
+      className={`${styles.modal} ${zoomed ? styles.zoomed : ""} ${
+        imageState.settled ? styles.ready : ""
+      }`}
       style={
         maxSize
           ? {

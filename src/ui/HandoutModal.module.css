@@ -42,6 +42,25 @@
   color: var(--text-1);
   font-family: var(--font-sans);
   font-size: var(--text-base);
+
+  /**
+   * ENTRADA SUAVE — e por que SÓ `opacity`.
+   *
+   * O card nasce invisível e aparece quando a imagem assenta, já no tamanho
+   * final. Antes ele piscava vazio, crescia e assentava.
+   *
+   * `transform` e qualquer animação de tamanho estão PROIBIDOS aqui: o
+   * `ResizeObserver` mede este elemento com `getBoundingClientRect()`, que
+   * inclui a transformação, e o resultado vira o tamanho do iframe — que é
+   * medido de novo. Foi essa realimentação o B14. `opacity` não entra na
+   * medida.
+   */
+  opacity: 0;
+  transition: opacity var(--duration-base) var(--ease-out);
+}
+
+.modal.ready {
+  opacity: 1;
 }
 
 /* No modo zoom a imagem estoura a largura, então liberamos o eixo X também.

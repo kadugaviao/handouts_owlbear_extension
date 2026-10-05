@@ -245,10 +245,20 @@ meio de uma sessão. Ganhou **faixa dourada à esquerda** marcando a área intei
 fundo levemente tingido e o selo em formato de pílula. É a única informação da
 janela que o jogador não pode ver.
 
-### V7 — Movimento
+### V7 — Movimento *(parcial)*
 
-Discreto, com propósito. Transição de 150 ms em estados interativos, `transform`
-e `opacity` apenas. Entrada do modal a partir da origem.
+Discreto, com propósito. Transição em estados interativos: feito em V3–V6.
+
+**Entrada do card: feito.** Ele nascia visível e vazio, crescia quando a imagem
+chegava e assentava — "piscar, alargar e aparecer", nas palavras de quem usou.
+Agora aparece por `opacity` quando a imagem assenta, já no tamanho final.
+
+> **`transform` e tamanho são PROIBIDOS no `.modal`.** O `ResizeObserver` mede
+> esse elemento com `getBoundingClientRect()`, que inclui a transformação, e o
+> resultado vira o tamanho do iframe — que é medido de novo. Essa
+> realimentação foi o B14. `opacity` não entra na medida.
+
+**Pendente:** entrada dos itens da lista e do painel.
 
 **Nada de parallax, nada de 3D.** Ver §6.
 
