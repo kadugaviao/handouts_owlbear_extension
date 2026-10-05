@@ -21,9 +21,6 @@ A extensão é instalada **no seu perfil**, não dentro de uma sala.
 
 3. Crie uma sala **marcando Handouts** na lista de extensões do diálogo
 
-> **O passo 3 é o que mais se esquece.** Instalada mas não habilitada na sala,
-> ela simplesmente não aparece.
-
 **Os jogadores não instalam nada.** A lista de extensões pertence à sala: quem
 entra pelo convite recebe a extensão junto, no computador ou no celular. E o
 endereço é permanente — funciona com o seu computador desligado.
@@ -64,10 +61,10 @@ handout que acabou de mostrar com um clique sem querer.
 A seção com a faixa dourada — **SÓ O MESTRE VÊ** — nunca chega ao jogador. Ele
 enxerga apenas o título e a imagem, e só dos handouts que você liberou.
 
-> **Até onde isso protege:** o ocultamento é da interface. O Owlbear não oferece
-> armazenamento privado, então alguém com conhecimento técnico consegue ler o
-> que está guardado na sala. É o mesmo modelo do Roll20 — bom para separar o que
-> cada um vê na mesa, não para guardar segredo de quem quer burlar.
+O ocultamento é da interface. O Owlbear não oferece armazenamento privado, então
+alguém com conhecimento técnico consegue ler o que está guardado na sala — o
+mesmo modelo do Roll20. Serve para separar o que cada um vê na mesa, não para
+guardar segredo de quem quer burlar.
 
 ### O que fica salvo, e o que não fica
 
@@ -101,10 +98,8 @@ A escolha vale para este aparelho e é lembrada entre sessões.
 ### Cópia de segurança
 
 **Exportar** baixa o caderninho inteiro num arquivo JSON. **Importar** lê esse
-arquivo de volta — útil para levar o material para outra campanha.
-
-> Importar **substitui** o caderninho inteiro. A tela avisa quantos handouts
-> entram e quantos se perdem antes de você confirmar.
+arquivo de volta e **substitui** o caderninho atual — útil para levar o material
+para outra campanha.
 
 Se o navegador bloquear o download, a extensão mostra o texto na tela para você
 copiar.
