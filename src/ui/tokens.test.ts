@@ -9,7 +9,7 @@
  * Mora em `ui/` porque é sobre a folha de estilo, e lê o arquivo como texto:
  * `global.css` não é importável num teste de `node`.
  */
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -92,5 +92,45 @@ describe("o navegador sabe em que tema está", () => {
   it("declara color-scheme nos dois temas", () => {
     expect(escuro).toMatch(/color-scheme:\s*dark/);
     expect(claro).toMatch(/color-scheme:\s*light/);
+  });
+});
+
+/**
+ * A regra que sustenta os dois temas: COMPONENTE NUNCA VÊ HEX.
+ *
+ * A lista de pendentes é uma QUARENTENA, não uma exceção permanente — ela
+ * existe só enquanto a refatoração do `design.md` não termina, e precisa
+ * encolher até ficar vazia. Enquanto isso, o teste impede que um arquivo NOVO
+ * nasça com cor fixa, que é como as 38 originais chegaram lá.
+ */
+const PENDENTES = ["HandoutModal.module.css"]; // V5 e V6
+
+describe("nenhum componente escreve cor fixa", () => {
+  const modulos = readdirSync(join(process.cwd(), "src", "ui"))
+    .filter((f) => f.endsWith(".module.css"))
+    .map((nome) => ({
+      nome,
+      convertido: !PENDENTES.includes(nome),
+      css: readFileSync(join(process.cwd(), "src", "ui", nome), "utf8"),
+    }));
+
+  it("há módulos para verificar", () => {
+    expect(modulos.length).toBeGreaterThan(0);
+  });
+
+  it.each(modulos.filter((m) => m.convertido))(
+    "$nome não tem hex nem rgb()",
+    ({ css }) => {
+      // Ignora o que está dentro de comentário: o texto explica as cores
+      // antigas em vários lugares.
+      const semComentarios = css.replace(/\/\*[\s\S]*?\*\//g, "");
+      expect(semComentarios).not.toMatch(/#[0-9a-fA-F]{3,8}\b/);
+      expect(semComentarios).not.toMatch(/\brgba?\(/);
+    },
+  );
+
+  it("a quarentena só lista arquivos que existem de fato", () => {
+    const nomes = modulos.map((m) => m.nome);
+    for (const pendente of PENDENTES) expect(nomes).toContain(pendente);
   });
 });

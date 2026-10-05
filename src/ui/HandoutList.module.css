@@ -1,61 +1,95 @@
+/**
+ * O painel do journal — V3+V4 de `documents/design.md`.
+ *
+ * Nenhum hex aqui. Tudo vem da camada semântica do `global.css`, que é o que
+ * faz os dois temas existirem sem duplicar folha de estilo.
+ */
+
 .panel {
   display: flex;
   flex-direction: column;
   height: 100vh;
-  box-sizing: border-box;
-  background-color: #ffffff;
-  color: #1c1c1c;
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-  font-size: 14px;
+  background-color: var(--surface);
+  color: var(--text-1);
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
 }
+
+/* ---------- Cabeçalho ---------- */
 
 .header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  padding: 8px 12px;
-  border-bottom: 1px solid #e0e0e0;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-bottom: 1px solid var(--line);
   flex: 0 0 auto;
 }
 
 .heading {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-weight: bold;
+  gap: var(--space-2);
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+  /* Afasta levemente as letras do título: num painel estreito é o que separa
+     "cabeçalho" de "mais um texto". */
+  letter-spacing: 0.01em;
 }
+
+/* O ícone do título é decorativo; o acento marca de quem é este painel. */
+.heading svg {
+  color: var(--accent);
+}
+
+/* ---------- Lista ---------- */
 
 .list {
   list-style: none;
   margin: 0;
-  padding: 0;
+  padding: var(--space-1) 0;
   flex: 1 1 auto;
   overflow-y: auto;
   scrollbar-width: thin;
-  scrollbar-color: #bdbdbd transparent;
+  scrollbar-color: var(--surface-hover) transparent;
 }
 
 .list::-webkit-scrollbar {
   width: 8px;
 }
 .list::-webkit-scrollbar-thumb {
-  background-color: #bdbdbd;
-  border-radius: 4px;
+  background-color: var(--surface-hover);
+  border-radius: var(--radius-sm);
 }
 
+/**
+ * O item inteiro reage, não só o texto.
+ *
+ * Antes o único retorno de hover era um sublinhado no título — que é o
+ * vocabulário de link, não de linha clicável, e deixava o resto da linha
+ * parecendo inerte.
+ */
 .item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  border-bottom: 1px solid #f0f0f0;
+  gap: var(--space-2);
+  /* 44px de altura mínima: alvo de toque, não só estética. */
+  min-height: 44px;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  margin: 0 var(--space-2);
+  transition: background-color var(--duration-fast) var(--ease-out);
+}
+
+.item:hover {
+  background-color: var(--surface-hover);
 }
 
 .itemButton {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-3);
   flex: 1 1 auto;
   min-width: 0;
 
@@ -68,83 +102,160 @@
   cursor: pointer;
 }
 
-.itemButton:hover .itemTitle {
-  text-decoration: underline;
-}
-
 .thumb {
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
   object-fit: cover;
-  border-radius: 3px;
-  border: 1px solid #e0e0e0;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
   flex: 0 0 auto;
-  background-color: #f5f5f5;
+  background-color: var(--surface-raised);
 }
 
 .itemTitle {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  font-weight: var(--weight-medium);
 }
+
+/**
+ * "Liberado para os jogadores".
+ *
+ * Era um ícone verde solto, do mesmo peso visual de qualquer outro ícone da
+ * linha. Como selo, ele vira estado — e o estado é a informação mais
+ * importante de um item do caderninho.
+ */
+.sharedDot {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-pill);
+  color: var(--accent);
+  /* `color-mix` mantém o selo ligado ao acento do tema: um valor fixo
+     divergiria do verde no dia em que a paleta mudasse. */
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+/* ---------- Botões ---------- */
 
 .button {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: var(--space-1);
   font: inherit;
-  font-size: 13px;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
   line-height: 1;
-  color: #1c1c1c;
-  background-color: #f5f5f5;
-  border: 1px solid #cccccc;
-  border-radius: 3px;
-  padding: 5px 9px;
+  color: var(--text-1);
+  background-color: var(--surface-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  padding: 7px 10px;
   cursor: pointer;
   white-space: nowrap;
+  transition:
+    background-color var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out);
 }
 
 .button:hover {
-  background-color: #eaeaea;
+  background-color: var(--surface-hover);
+  border-color: var(--accent);
 }
 
 .ghostButton {
   background: none;
   border: none;
-  padding: 4px;
-  border-radius: 3px;
-  color: #888888;
+  padding: var(--space-1);
+  border-radius: var(--radius-md);
+  color: var(--text-3);
   cursor: pointer;
   display: inline-flex;
   flex: 0 0 auto;
+  transition:
+    background-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
 }
 
 .ghostButton:hover {
-  background-color: #ececec;
-  color: #c62828;
+  background-color: color-mix(in srgb, var(--danger) 16%, transparent);
+  color: var(--danger);
 }
 
-.empty {
-  padding: 24px 16px;
-  text-align: center;
-  color: #888888;
-  font-size: 13px;
-  line-height: 1.5;
-}
-
-/* Indicador de "liberado para os jogadores" no item da lista. */
-.sharedDot {
-  flex: 0 0 auto;
+.smallButton {
   display: inline-flex;
-  color: #4a7c37;
+  align-items: center;
+  gap: var(--space-1);
+  font: inherit;
+  font-size: var(--text-sm);
+  line-height: 1;
+  color: var(--text-2);
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  padding: 5px 7px;
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
 }
+
+.smallButton:hover {
+  background-color: var(--surface-hover);
+  color: var(--text-1);
+}
+
+/* ---------- Estado vazio ---------- */
+
+/**
+ * Deixou de ser parágrafo corrido.
+ *
+ * Um painel vazio é a primeira coisa que o mestre vê, e antes ele era três
+ * frases cinzas empilhadas. Agora tem um ícone âncora, uma linha forte e o
+ * resto subordinado — a leitura acontece em ordem.
+ */
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-6) var(--space-4);
+  text-align: center;
+  color: var(--text-2);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+}
+
+.emptyIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-raised);
+  color: var(--text-3);
+  margin-bottom: var(--space-1);
+}
+
+.emptyTitle {
+  color: var(--text-1);
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+}
+
+/* ---------- Barra de ferramentas ---------- */
 
 .toolbar {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border-bottom: 1px solid #f0f0f0;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--line);
   flex: 0 0 auto;
 }
 
@@ -153,88 +264,94 @@
   flex: 1 1 auto;
 }
 
-.smallButton {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font: inherit;
-  font-size: 12px;
-  line-height: 1;
-  color: #555555;
-  background: none;
-  border: 1px solid transparent;
-  border-radius: 3px;
-  padding: 4px 6px;
-  cursor: pointer;
-}
-
-.smallButton:hover {
-  background-color: #f2f2f2;
-  border-color: #e0e0e0;
-  color: #1c1c1c;
-}
-
 .hiddenInput {
   display: none;
 }
 
+/* ---------- Erro ---------- */
+
 .error {
   margin: 0;
-  padding: 6px 12px;
-  font-size: 12px;
-  color: #b3261e;
-  background-color: #fdecea;
-  border-bottom: 1px solid #f5c6c2;
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--danger);
+  background-color: color-mix(in srgb, var(--danger) 12%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--danger) 30%, transparent);
 }
 
+.dismiss {
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  font-weight: var(--weight-medium);
+  text-decoration: underline;
+  padding: 0;
+  margin-left: var(--space-2);
+}
+
+/* ---------- Fallback de exportação ---------- */
+
 .fallback {
-  padding: 8px 12px;
-  border-bottom: 1px solid #f0f0f0;
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--line);
 }
 
 .fallbackArea {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 11px;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
   width: 100%;
   min-height: 90px;
-  padding: 6px;
-  /* Fundo e cor EXPLÍCITOS: era o único controle de formulário que herdava o
+  padding: var(--space-2);
+  /* Fundo e cor EXPLÍCITOS: é o único controle de formulário que herdaria o
      padrão do navegador, e com `color-scheme` declarado ele renderizaria
      escuro dentro de um painel claro. */
-  background: var(--surface);
+  background: var(--bg);
   color: var(--text-1);
   border: 1px solid var(--line);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   resize: vertical;
 }
 
-.hint {
-  font-size: 11px;
-  color: #888888;
-  line-height: 1.4;
-  margin: 0 0 6px 0;
+.fallbackRow {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--space-1);
 }
 
-/* Medidor do orçamento de 16 kB da metadata da sala. */
+.hint {
+  font-size: var(--text-xs);
+  color: var(--text-2);
+  line-height: var(--leading-normal);
+  margin: 0 0 var(--space-2) 0;
+}
+
+/* ---------- Orçamento de metadata ---------- */
+
 .budget {
-  padding: 6px 12px 8px;
-  border-bottom: 1px solid #f0f0f0;
+  padding: var(--space-2) var(--space-3) var(--space-3);
+  border-bottom: 1px solid var(--line);
   flex: 0 0 auto;
 }
 
 .budgetLabel {
   display: flex;
   justify-content: space-between;
-  gap: 8px;
-  font-size: 11px;
-  color: #888888;
-  margin-bottom: 4px;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--text-2);
+  margin-bottom: var(--space-1);
+  /* Números de largura fixa: sem isto "7.8 kB" e "11.2 kB" têm larguras
+     diferentes, e o valor pula de lugar a cada alteração do caderninho. */
+  font-variant-numeric: tabular-nums;
 }
 
 .budgetTrack {
   height: 4px;
-  border-radius: 2px;
-  background-color: #ececec;
+  border-radius: var(--radius-pill);
+  background-color: var(--surface-raised);
   overflow: hidden;
 }
 
@@ -246,66 +363,52 @@
   height: 100%;
   width: 100%;
   transform-origin: left;
-  background-color: #7aa06b;
-  transition: transform 0.2s ease;
+  background-color: var(--accent);
+  transition: transform var(--duration-base) var(--ease-out);
 }
 
 .budgetFill.warning {
-  background-color: #d9a441;
+  background-color: var(--gold);
 }
 
 .budgetFill.exceeded {
-  background-color: #c5533f;
+  background-color: var(--danger);
 }
 
-.dismiss {
-  background: none;
-  border: none;
-  color: inherit;
-  cursor: pointer;
-  font: inherit;
-  text-decoration: underline;
-  padding: 0;
-  margin-left: 6px;
-}
+/* ---------- Confirmações ---------- */
 
-.fallbackRow {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 4px;
-}
-
-/* Confirmação de importação. Substituir o journal é irreversível, então o
-   aviso usa o tom de alerta e diz o número exato do que se perde. */
+/* Substituir o journal e excluir um handout são irreversíveis, então o aviso
+   usa o tom de alerta e diz o número exato do que se perde. */
 .confirm {
   flex: 0 0 auto;
-  padding: 10px 12px;
-  border-bottom: 1px solid #f5c6c2;
-  background-color: #fdf3f2;
+  padding: var(--space-3);
+  border-bottom: 1px solid color-mix(in srgb, var(--danger) 30%, transparent);
+  background-color: color-mix(in srgb, var(--danger) 10%, transparent);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .confirmText {
   margin: 0;
-  font-size: 12px;
-  line-height: 1.5;
-  color: #7a2318;
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--text-1);
 }
 
 .confirmActions {
   display: flex;
   justify-content: flex-end;
-  gap: 6px;
+  gap: var(--space-2);
 }
 
 .button.danger {
-  background-color: #c5533f;
-  border-color: #ab4632;
-  color: #ffffff;
+  background-color: var(--danger);
+  border-color: var(--danger);
+  color: var(--danger-ink);
 }
 
 .button.danger:hover {
-  background-color: #ab4632;
+  background-color: color-mix(in srgb, var(--danger) 85%, var(--text-1));
+  border-color: var(--danger);
 }

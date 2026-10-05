@@ -4,7 +4,7 @@
 diz como ela se parece, e por quê.
 
 - Última atualização: **2026-10-05**
-- Estado: **diagnóstico fechado, refatoração não iniciada**
+- Estado: **V1 a V4 concluídos** · V5 a V8 pendentes
 - Requisitos: `documents/spec.md` · Visão geral: `PROJETO.md`
 
 ---
@@ -209,7 +209,12 @@ hook que aplica `data-theme` na raiz. O override de três estados em
 **Teste:** o modo inicial segue `getTheme()`; `onChange` reage; o override vence
 o anfitrião; `localStorage` indisponível não derruba nada.
 
-### V3 — `HandoutList`: lista e cabeçalho
+### V3+V4 — `HandoutList` inteiro *(feitos juntos)*
+
+> **Por que juntos, contrariando o plano original.** As duas etapas mexem no
+> mesmo arquivo CSS. Separá-las deixaria um commit com metade do painel em
+> token e metade em hex — em tema escuro, meio escuro e meio branco. Um estado
+> intermediário que ninguém deveria ver, nem em `git bisect`.
 
 Substitui as 38 cores pelos tokens. O que muda de verdade:
 
@@ -223,11 +228,11 @@ Substitui as 38 cores pelos tokens. O que muda de verdade:
 > classe CSS. A refatoração visual não deve quebrar nenhum. Se quebrar, é sinal
 > de que mudei comportamento, não aparência.
 
-### V4 — `HandoutList`: barra de orçamento, erros e confirmações
-
-- Orçamento com `tabular-nums` e cor semântica por faixa.
-- Erro e confirmação viram superfícies elevadas com a cor de perigo, hoje
-  improvisada em `#fdecea`.
+> **A trava.** `tokens.test.ts` passou a recusar hex e `rgb()` em qualquer
+> `.module.css` já convertido. `HandoutModal.module.css` está numa lista de
+> QUARENTENA, que precisa encolher até ficar vazia no V6 — e enquanto isso
+> impede que um arquivo novo nasça com cor fixa, que foi como as 38 originais
+> chegaram lá.
 
 ### V5 — `HandoutModal`: moldura e cabeçalho
 

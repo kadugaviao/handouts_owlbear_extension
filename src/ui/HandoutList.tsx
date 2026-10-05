@@ -8,6 +8,7 @@
  */
 import { useRef, useState } from "react";
 import {
+  BookOpen,
   ClipboardCopy,
   Download,
   Eye,
@@ -347,21 +348,29 @@ export function HandoutList({
       )}
 
       {handouts.length === 0 ? (
-        <p className={styles.empty}>
+        /* Estado vazio com âncora visual e hierarquia: era a primeira coisa
+           que o mestre via, e eram três frases cinzas empilhadas. */
+        <div className={styles.empty}>
+          <span className={styles.emptyIcon}>
+            <BookOpen size={20} aria-hidden />
+          </span>
           {isGM ? (
             <>
-              Nada no caderninho ainda.
-              <br />
-              Clique em <strong>Biblioteca</strong> para abrir uma imagem.
-              <br />
-              <br />
-              Só aparece aqui o que estiver liberado para os jogadores ou o que
-              você anotar — o resto vive na sua biblioteca do Owlbear.
+              <span className={styles.emptyTitle}>Nada no caderninho ainda.</span>
+              <span>
+                Clique em <strong>Biblioteca</strong> para abrir uma imagem.
+              </span>
+              <span>
+                Só aparece aqui o que estiver liberado para os jogadores ou o
+                que você anotar — o resto vive na sua biblioteca do Owlbear.
+              </span>
             </>
           ) : (
-            "O mestre ainda não liberou nenhum handout."
+            <span className={styles.emptyTitle}>
+              O mestre ainda não liberou nenhum handout.
+            </span>
           )}
-        </p>
+        </div>
       ) : (
         <ul className={styles.list}>
           {handouts.map((handout) => (
