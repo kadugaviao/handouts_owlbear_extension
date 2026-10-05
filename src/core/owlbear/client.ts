@@ -95,6 +95,22 @@ export async function openHandoutLocally(
 ): Promise<void> {
   const center = await viewportCenter();
 
+  /**
+   * FECHAR ANTES DE ABRIR.
+   *
+   * Reabrir o mesmo handout com o mesmo id e a MESMA URL não remonta o iframe:
+   * o Owlbear só reposiciona e redefine o tamanho para o inicial. O React lá
+   * dentro continua vivo, com o `lastSent` do `usePopoverAutoSize` guardando o
+   * tamanho antigo — e o limiar de 4px bloqueia o reenvio. O popover ficava
+   * grande com um card pequeno dentro, e a faixa transparente em volta voltava
+   * a engolir cliques no mapa.
+   *
+   * O `catch` é esperado no caminho normal: na primeira vez não há nada para
+   * fechar, e isso não pode impedir a janela de abrir.
+   */
+  // >>> OBR: fecha a janela anterior, se houver.
+  await OBR.popover.close(HANDOUT_POPOVER_ID).catch(() => undefined);
+
   // >>> OBR: abre um popover flutuante sobre o mapa, no cliente local.
   await OBR.popover.open({
     id: HANDOUT_POPOVER_ID,

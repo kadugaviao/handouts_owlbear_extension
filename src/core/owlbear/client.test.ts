@@ -10,7 +10,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("@owlbear-rodeo/sdk", () => ({
   default: {
     viewport: { getWidth: vi.fn(), getHeight: vi.fn() },
-    popover: { open: vi.fn() },
+    popover: { open: vi.fn(), close: vi.fn() },
   },
 }));
 
@@ -38,6 +38,7 @@ function openedWith() {
 beforeEach(() => {
   vi.resetAllMocks();
   popover.open.mockResolvedValue(undefined);
+  popover.close.mockResolvedValue(undefined);
 });
 
 describe("openHandoutLocally", () => {
@@ -124,4 +125,41 @@ describe("describeSdkError", () => {
       expect(describeSdkError(valor)).toBe("");
     },
   );
+});
+
+/**
+ * REABRIR O MESMO HANDOUT.
+ *
+ * Relatado em uso real: "se a imagem já estiver aberta e eu clicar de novo no
+ * token, ela buga e aumenta os arredores".
+ *
+ * `OBR.popover.open` com o mesmo id e a MESMA URL não remonta o iframe — o
+ * Owlbear só reposiciona e redefine o tamanho para os 620x700 iniciais. O React
+ * lá dentro continua vivo, com o `lastSent` do `usePopoverAutoSize` guardando o
+ * tamanho antigo, e o limiar de 4px bloqueia o reenvio. Resultado: popover
+ * grande com um card pequeno dentro, e a faixa transparente em volta voltando a
+ * engolir cliques no mapa.
+ */
+describe("abrir o handout sempre parte de uma janela nova", () => {
+  it("fecha antes de abrir", async () => {
+    await openHandoutLocally(IMAGE, "Token 1");
+
+    expect(popover.close).toHaveBeenCalledWith(HANDOUT_POPOVER_ID);
+    // A ORDEM é o que importa: fechar depois de abrir deixaria a tela vazia.
+    expect(popover.close.mock.invocationCallOrder[0]).toBeLessThan(
+      popover.open.mock.invocationCallOrder[0],
+    );
+  });
+
+  it("abre mesmo quando não havia nada para fechar", async () => {
+    // Fechar um popover inexistente pode ser recusado pelo SDK — e isso não
+    // pode impedir a janela de abrir, que é o caminho normal da primeira vez.
+    popover.close.mockRejectedValue({
+      name: "MissingDataError",
+      message: "No popover found",
+    });
+
+    await expect(openHandoutLocally(IMAGE, "Token 1")).resolves.toBeUndefined();
+    expect(popover.open).toHaveBeenCalledTimes(1);
+  });
 });
