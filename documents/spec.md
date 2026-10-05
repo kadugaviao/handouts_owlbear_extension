@@ -6,7 +6,7 @@ construído, o que foi verificado de fato e o que falta.
 - Última atualização: **2026-09-11**
 - Estado: **publicado e funcional** em
   [handouts-owlbear-extension.pages.dev](https://handouts-owlbear-extension.pages.dev/manifest.json)
-- Visão geral: `PROJETO.md` · Como rodar: `README.md`
+- Visão geral: `PROJETO.md` · Como rodar: `README.md` · Visual: `design.md`
 
 ---
 
@@ -816,8 +816,9 @@ vale (outro jogador com DevTools leria).
 
 - A janela mantém 600 px de largura mesmo com imagem pequena — um token fica
   centralizado com bastante espaço branco em volta. Encolher o card até a
-  largura da imagem é uma opção.
-- Acessibilidade do modal: o foco ainda não fica preso dentro dele (`Esc` já fecha).
+  largura da imagem é uma opção. Endereçado no `design.md`, V5.
+- Acessibilidade do modal: o foco ainda não fica preso dentro dele (`Esc` já
+  fecha). Endereçado no `design.md`, V8.
 - **Interface sem teste.** `HandoutList`, `HandoutModal`, `journal.tsx`,
   `handout.tsx` e `mount.ts` não têm cobertura. Foi por isso que os B24 e B25
   precisaram ser achados por leitura, e não pela suíte. É a maior lacuna que

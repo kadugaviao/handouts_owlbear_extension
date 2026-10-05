@@ -9,6 +9,8 @@ anota o que quiser, e libera para os jogadores com um clique.
 > - **`PROJETO.md`** (este arquivo) — o que é o projeto, as decisões e o estado.
 > - **`documents/spec.md`** — a fonte da verdade: tudo que foi feito, por quê,
 >   e o que falta.
+> - **`documents/design.md`** — a fonte da verdade visual: tokens, tema e a
+>   ordem da refatoração de interface.
 
 ---
 
