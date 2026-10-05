@@ -141,6 +141,40 @@ describe("describeSdkError", () => {
  * engolir cliques no mapa.
  */
 describe("abrir o handout sempre parte de uma janela nova", () => {
+  /**
+   * O QUE A PRIMEIRA CORREÇÃO ERROU.
+   *
+   * Fechar antes de abrir não bastou: medido na captura do usuário, o popover
+   * reaberto continuava com 620x700 — o tamanho inicial — e o card pequeno
+   * dentro. O iframe não foi remontado, então o `lastSent` do
+   * `usePopoverAutoSize` seguiu com o tamanho antigo e o limiar de 4px
+   * suprimiu o reenvio.
+   *
+   * A URL diferente a cada abertura torna a correção INDEPENDENTE de como o
+   * Owlbear decide reaproveitar iframes: um `src` novo é uma navegação, e
+   * navegação é estado zerado.
+   */
+  it("cada abertura usa uma URL diferente", async () => {
+    await openHandoutLocally(IMAGE, "Token 1");
+    const primeira = popover.open.mock.calls[0][0].url;
+
+    popover.open.mockClear();
+    await openHandoutLocally(IMAGE, "Token 1");
+    const segunda = popover.open.mock.calls[0][0].url;
+
+    expect(primeira).not.toBe(segunda);
+  });
+
+  it("a imagem e o título sobrevivem ao parâmetro novo", async () => {
+    await openHandoutLocally(IMAGE, "Token 1");
+    const { searchParams } = new URL(
+      popover.open.mock.calls[0][0].url as string,
+      "https://exemplo.test",
+    );
+    expect(searchParams.get("src")).toBe(IMAGE);
+    expect(searchParams.get("title")).toBe("Token 1");
+  });
+
   it("fecha antes de abrir", async () => {
     await openHandoutLocally(IMAGE, "Token 1");
 

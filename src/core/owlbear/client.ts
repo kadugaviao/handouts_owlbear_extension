@@ -47,8 +47,30 @@ export function describeSdkError(error: unknown): string {
  * do broadcast — e funciona para handouts que nem têm registro na metadata,
  * que é o caso normal agora que a biblioteca do Owlbear é a fonte.
  */
+/**
+ * Contador de aberturas. Só serve para tornar a URL diferente a cada vez.
+ *
+ * POR QUE PRECISA SER DIFERENTE: reabrir com a MESMA URL não garante que o
+ * Owlbear remonte o iframe — e, se ele não remonta, o React lá dentro continua
+ * vivo com o `lastSent` do `usePopoverAutoSize` guardando o tamanho antigo. O
+ * limiar de 4px então suprime o reenvio e o popover fica no tamanho inicial de
+ * 620x700 com um card pequeno dentro, com a faixa transparente em volta
+ * engolindo cliques no mapa.
+ *
+ * Fechar antes de abrir NÃO resolveu isso — medido em uso real. Um `src` novo
+ * é uma navegação, e navegação zera o estado independentemente de como o
+ * Owlbear decide reaproveitar iframes.
+ */
+let aberturas = 0;
+
 function handoutPopoverUrl(imageUrl: string, title: string): string {
-  const params = new URLSearchParams({ src: imageUrl, title });
+  const params = new URLSearchParams({
+    src: imageUrl,
+    title,
+    // A página ignora este parâmetro; quem o lê é o navegador, ao decidir se
+    // precisa navegar.
+    n: String(++aberturas),
+  });
   return `/pages/handout.html?${params.toString()}`;
 }
 
