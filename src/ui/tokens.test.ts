@@ -98,12 +98,11 @@ describe("o navegador sabe em que tema está", () => {
 /**
  * A regra que sustenta os dois temas: COMPONENTE NUNCA VÊ HEX.
  *
- * A lista de pendentes é uma QUARENTENA, não uma exceção permanente — ela
- * existe só enquanto a refatoração do `design.md` não termina, e precisa
- * encolher até ficar vazia. Enquanto isso, o teste impede que um arquivo NOVO
- * nasça com cor fixa, que é como as 38 originais chegaram lá.
+ * A quarentena existiu enquanto a refatoração do `design.md` corria e hoje
+ * está VAZIA — todo módulo é verificado. Mantida como lista para que um
+ * arquivo em conversão possa entrar temporariamente, nunca em definitivo.
  */
-const PENDENTES = ["HandoutModal.module.css"]; // V5 e V6
+const PENDENTES: string[] = [];
 
 describe("nenhum componente escreve cor fixa", () => {
   const modulos = readdirSync(join(process.cwd(), "src", "ui"))
@@ -129,8 +128,9 @@ describe("nenhum componente escreve cor fixa", () => {
     },
   );
 
-  it("a quarentena só lista arquivos que existem de fato", () => {
-    const nomes = modulos.map((m) => m.nome);
-    for (const pendente of PENDENTES) expect(nomes).toContain(pendente);
+  // Um `expect` sobre lista vazia passa por vácuo e não prende nada. O que
+  // prende é exigir que TODO módulo esteja sendo verificado.
+  it("nenhum módulo está fora da verificação", () => {
+    expect(modulos.filter((m) => !m.convertido)).toEqual([]);
   });
 });

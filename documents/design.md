@@ -4,7 +4,7 @@
 diz como ela se parece, e por quê.
 
 - Última atualização: **2026-10-05**
-- Estado: **V1 a V4 concluídos** · V5 a V8 pendentes
+- Estado: **V1 a V6 concluídos** · V7 (movimento) e V8 (acessibilidade) pendentes
 - Requisitos: `documents/spec.md` · Visão geral: `PROJETO.md`
 
 ---
@@ -193,14 +193,14 @@ orçamento, que hoje dançam quando mudam de largura.
 
 Ordem de execução. Cada uma deixa a árvore verde e pode ser commitada sozinha.
 
-### V1 — Fundação: tokens e escalas *(bloqueia todas as outras)*
+### V1 — Fundação: tokens e escalas ✅
 
 `global.css` passa de 14 linhas para o sistema da §3: primitivas, semântica
 nos dois temas, escalas. Nenhum componente muda ainda.
 
 Inclui `color-scheme` e o respeito a `prefers-reduced-motion`.
 
-### V2 — Tema do Owlbear
+### V2 — Tema do Owlbear ✅
 
 Novo `core/owlbear/theme.ts` (camada `owlbear/`, a única que fala com o SDK) +
 hook que aplica `data-theme` na raiz. O override de três estados em
@@ -209,7 +209,7 @@ hook que aplica `data-theme` na raiz. O override de três estados em
 **Teste:** o modo inicial segue `getTheme()`; `onChange` reage; o override vence
 o anfitrião; `localStorage` indisponível não derruba nada.
 
-### V3+V4 — `HandoutList` inteiro *(feitos juntos)*
+### V3+V4 — `HandoutList` inteiro ✅ *(feitos juntos)*
 
 > **Por que juntos, contrariando o plano original.** As duas etapas mexem no
 > mesmo arquivo CSS. Separá-las deixaria um commit com metade do painel em
@@ -228,21 +228,22 @@ Substitui as 38 cores pelos tokens. O que muda de verdade:
 > classe CSS. A refatoração visual não deve quebrar nenhum. Se quebrar, é sinal
 > de que mudei comportamento, não aparência.
 
-> **A trava.** `tokens.test.ts` passou a recusar hex e `rgb()` em qualquer
-> `.module.css` já convertido. `HandoutModal.module.css` está numa lista de
-> QUARENTENA, que precisa encolher até ficar vazia no V6 — e enquanto isso
-> impede que um arquivo novo nasça com cor fixa, que foi como as 38 originais
-> chegaram lá.
+> **A trava.** `tokens.test.ts` recusa hex e `rgb()` em **todo** `.module.css`.
+> A quarentena que existiu durante a conversão está vazia, e um teste exige que
+> continue assim — um `expect` sobre lista vazia passaria por vácuo, então o
+> que prende é "nenhum módulo está fora da verificação".
 
-### V5 — `HandoutModal`: moldura e cabeçalho
+### V5 — `HandoutModal`: moldura e cabeçalho ✅
 
 O card ganha hierarquia: superfície, borda de 1 px, sombra do token. O cabeçalho
 separa **identidade** (ícone + título) de **ações** com espaço, não com borda.
 
-### V6 — `HandoutModal`: a seção do mestre
+### V6 — `HandoutModal`: a seção do mestre ✅
 
-Hoje é um bloco cinza com um cadeado. Passa a usar o **dourado** como marcação —
-é a única informação privada da tela e precisa se distinguir à primeira vista.
+Era um bloco cinza com um cadeado pequeno no topo — fácil de não registrar no
+meio de uma sessão. Ganhou **faixa dourada à esquerda** marcando a área inteira,
+fundo levemente tingido e o selo em formato de pílula. É a única informação da
+janela que o jogador não pode ver.
 
 ### V7 — Movimento
 
