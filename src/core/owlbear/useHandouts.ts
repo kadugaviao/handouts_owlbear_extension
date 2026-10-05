@@ -86,6 +86,20 @@ function useRoomHandouts() {
 
   useEffect(() => {
     let active = true;
+    /**
+     * Já chegou alguma atualização ao vivo?
+     *
+     * A leitura inicial é assíncrona e a assinatura é síncrona, então nada
+     * garante a ordem de chegada — e a resposta de `getMetadata()` carrega o
+     * estado de QUANDO foi pedida, não de quando chega.
+     *
+     * Visto em uso real: o jogador abriu o caderninho no mesmo instante em que
+     * o mestre liberou. O evento chegou e preencheu a lista; a resposta do
+     * pedido chegou atrasada, com o estado de antes, e APAGOU. O jogador ficou
+     * com "o mestre ainda não liberou nenhum handout" e o handout aberto na
+     * própria tela.
+     */
+    let gotLiveUpdate = false;
 
     /** Aplica a mudança só se a nossa fatia realmente mudou. */
     function applyIfChanged(metadata: Metadata) {
@@ -103,7 +117,8 @@ function useRoomHandouts() {
     Promise.all([OBR.room.getMetadata(), OBR.player.getRole()])
       .then(([metadata, role]) => {
         if (!active) return;
-        applyIfChanged(metadata);
+        // Só vale se nada mais novo chegou enquanto esperávamos.
+        if (!gotLiveUpdate) applyIfChanged(metadata);
         setIsGM(role === "GM");
         setLoadError(null);
       })
@@ -122,7 +137,10 @@ function useRoomHandouts() {
       });
 
     // >>> OBR: assinaturas reativas.
-    const unsubscribeMetadata = OBR.room.onMetadataChange(applyIfChanged);
+    const unsubscribeMetadata = OBR.room.onMetadataChange((metadata) => {
+      gotLiveUpdate = true;
+      applyIfChanged(metadata);
+    });
     const unsubscribePlayer = OBR.player.onChange((player) => {
       setIsGM(player.role === "GM");
     });
