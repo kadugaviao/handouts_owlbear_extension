@@ -5,12 +5,14 @@ mestre abre uma imagem da sua biblioteca numa janela flutuante sobre o mapa,
 anota o que quiser, e libera para os jogadores com um clique.
 
 > **Documentação deste projeto**
-> - **`README.md`** — como rodar, instalar e resolver problemas comuns.
+> - **`README.md`** — manual de quem USA a extensão: instalar e funcionalidades.
 > - **`PROJETO.md`** (este arquivo) — o que é o projeto, as decisões e o estado.
 > - **`documents/spec.md`** — a fonte da verdade: tudo que foi feito, por quê,
 >   e o que falta.
 > - **`documents/design.md`** — a fonte da verdade visual: tokens, tema e a
 >   ordem da refatoração de interface.
+> - **`documents/desenvolvimento.md`** — rodar, estrutura das camadas e as
+>   armadilhas conhecidas.
 
 ---
 
@@ -20,7 +22,7 @@ anota o que quiser, e libera para os jogadores com um clique.
 |---|---|
 | Compilação (`tsc --noEmit`) | ✅ limpa |
 | Build (`npm run build`) | ✅ 3 bundles |
-| Testes (`npm test`) | ✅ 88 passando |
+| Testes (`npm test`) | ✅ 241 passando |
 | Rodando no Owlbear | ✅ confirmado pelo mestre |
 | Testado com jogador real | ✅ liberar, reabrir e retirar validados em segunda tela |
 | Publicado (deploy) | ✅ [handouts-owlbear-extension.pages.dev](https://handouts-owlbear-extension.pages.dev/manifest.json) |
@@ -69,11 +71,13 @@ BIBLIOTECA  →  gerenciador de imagens do Owlbear
                ilimitado, já organiza e nomeia, custo zero para nós
 
 CADERNINHO  →  metadata da sala
-               só handouts liberados ou anotados; o resto é podado
+               só handouts fixados, liberados ou anotados; o resto é podado
 ```
 
-Um handout aberto da biblioteca, não liberado e sem anotação, **ocupa 0 byte**.
-A poda é automática (`isWorthStoring` em `src/core/domain/handout.ts`).
+Um handout aberto da biblioteca, sem fixar, sem liberar e sem anotação,
+**ocupa 0 byte**. A poda é automática (`isWorthStoring` em
+`src/core/domain/handout.ts`), e o botão de fixar existe para recusá-la quando o
+mestre quiser que a imagem simplesmente fique na lista (D10).
 
 | Situação do handout | Bytes | Cabem |
 |---|---|---|

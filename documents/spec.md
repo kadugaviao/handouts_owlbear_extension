@@ -6,7 +6,8 @@ construído, o que foi verificado de fato e o que falta.
 - Última atualização: **2026-09-11**
 - Estado: **publicado e funcional** em
   [handouts-owlbear-extension.pages.dev](https://handouts-owlbear-extension.pages.dev/manifest.json)
-- Visão geral: `PROJETO.md` · Como rodar: `README.md` · Visual: `design.md`
+- Visão geral: `PROJETO.md` · Manual do usuário: `README.md`
+- Desenvolvimento: `desenvolvimento.md` · Visual: `design.md`
 
 ---
 
@@ -41,6 +42,8 @@ construído, o que foi verificado de fato e o que falta.
 | R10 | Zoom entre tamanho nítido e ampliado | `ui/HandoutModal.module.css` |
 | R11 | Exportar/importar o caderninho em JSON | `core/domain/backup.ts` |
 | R12 | Não estourar o limite de metadata da sala | `core/domain/limits.ts` |
+| R14 | Fixar um handout para que ele fique no caderninho sem anotação | `core/domain/handout.ts` (`pinned`) |
+| R15 | Acompanhar o tema do Owlbear, com escolha manual de claro/escuro | `core/domain/theme.ts` |
 
 ### Funcionais — adiados conscientemente
 
@@ -138,6 +141,28 @@ fechado — o caso normal — nunca receberia nada.
 
 Um servidor de desenvolvimento com CORS aberto deixa **qualquer página que você
 visite** ler o código-fonte do projeto.
+
+---
+
+### D10 — A poda é o padrão, mas pode ser recusada
+
+`isWorthStoring` existe porque a biblioteca do Owlbear já descreve integralmente
+uma imagem aberta: guardar de novo gastaria orçamento sem acrescentar nada. É o
+que torna a biblioteca efetivamente ilimitada (D1).
+
+**O que faltava era uma forma de dizer "não".** Relatado em uso real: *"só
+consigo salvar a imagem se tiver alguma anotação, senão ela só some"*. A pessoa
+tinha que inventar uma anotação qualquer para manter uma imagem na lista.
+
+O campo `pinned` recusa a poda. Medido antes de decidir: cada registro ocupa
+~150 bytes, então o orçamento de 10 kB comporta cerca de 65 handouts — guardar
+alguns a mais não é o problema que a poda resolvia.
+
+**O botão mora na janela do handout, não na lista**, e isso é estrutural: um
+handout ainda não fixado, anotado nem liberado **não aparece na lista**. A
+janela é o único lugar onde ele existe antes de ser salvo.
+
+`pinned` não vai para o jogador — é organização do caderninho do mestre.
 
 ---
 
@@ -654,7 +679,7 @@ assim o navegador recusa.
 |---|---|---|
 | Tipagem | `npx tsc --noEmit` | ✅ limpa |
 | Build | `npm run build` | ✅ 3 bundles |
-| Testes | `npm test` | ✅ 88 passando |
+| Testes | `npm test` | ✅ 241 passando |
 | CDN redimensiona (`?width=`) | medido com URL real | ✅ ver Etapa 15 |
 | Manifest aponta para arquivos reais | `manifest.test.ts` | ✅ validado por mutação |
 | Camadas respeitadas | `architecture.test.ts` | ✅ |

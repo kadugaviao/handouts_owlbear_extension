@@ -2,213 +2,139 @@
 
 ![CI](https://github.com/kadugaviao/handouts_owlbear_extension/actions/workflows/ci.yml/badge.svg)
 
-Journal estilo Roll20: o mestre abre uma imagem da sua biblioteca numa janela
-flutuante sobre o mapa, anota o que quiser, e libera para os jogadores com um
-clique.
+Mostre imagens para a sua mesa sem sair do mapa. O mestre abre uma ilustração,
+anota o que quiser em segredo, e libera para os jogadores com um clique — numa
+janela flutuante, como o Journal do Roll20.
 
 ---
 
-## Rodar
+## Instalar
 
-```bash
-npm install
-npm run dev
-```
-
-## Instalar no Owlbear
-
-A extensão é instalada no **perfil**, não dentro de uma sala:
+A extensão é instalada **no seu perfil**, não dentro de uma sala.
 
 1. Abra [owlbear.app/profile](https://owlbear.app/profile)
-2. **Add Extension** → cole o endereço:
+2. Clique em **Add Extension** e cole este endereço:
 
    ```
    https://handouts-owlbear-extension.pages.dev/manifest.json
    ```
 
-3. Crie uma sala **habilitando a extensão** no diálogo de criação
+3. Crie uma sala **marcando Handouts** na lista de extensões do diálogo
 
-O passo 3 é fácil de esquecer: instalada mas não habilitada, ela não aparece.
+> **O passo 3 é o que mais se esquece.** Instalada mas não habilitada na sala,
+> ela simplesmente não aparece.
 
-Esse endereço é permanente e funciona no celular, no computador do amigo, e com
-a sua máquina desligada. Os jogadores não instalam nada — a lista de extensões
-pertence à sala.
+**Os jogadores não instalam nada.** A lista de extensões pertence à sala: quem
+entra pelo convite recebe a extensão junto, no computador ou no celular. E o
+endereço é permanente — funciona com o seu computador desligado.
 
-### Para desenvolver
+Para usar numa sala que já existe, abra as configurações dela e marque Handouts
+lá.
 
-Rodando `npm run dev`, use `http://localhost:5173/manifest.json` no lugar.
-Mantenha as duas instalações separadas no perfil e **remova a de `localhost`
-quando terminar** — senão o Owlbear tenta carregar um servidor que não existe
-mais.
+---
 
-> `localhost` só existe na máquina onde o servidor está de pé. No celular,
-> `localhost` é o próprio celular, e o Owlbear responde *"Não foi possível
-> carregar a extensão"*. Não é defeito: é o que `localhost` significa.
+## Usando
 
-## Testar o fluxo com jogadores
+Clique no ícone 📄 na barra do Owlbear para abrir o **caderninho**.
 
-O jogador **nunca instala nada** — a lista de extensões pertence à sala. Ele
-abre o link de convite e o cliente dele carrega a extensão sozinho. O que ele
-precisa é que a URL do manifest seja **alcançável do aparelho dele**.
+### Abrir uma imagem
 
-### Na mesma máquina — para 95% dos testes
+**+ Biblioteca** abre o gerenciador de imagens do próprio Owlbear. Escolha um
+arquivo — ou envie um novo — e ele aparece numa janela flutuante sobre o mapa.
 
-Basta abrir duas janelas do navegador. Ambas resolvem `localhost` para o mesmo
-servidor, então funciona sem nenhuma configuração:
+A biblioteca é ilimitada e não consome nada da sua sala. Você pode abrir quantas
+imagens quiser.
 
-| Janela | Papel |
+### A janela do handout
+
+| Botão | O que faz |
 |---|---|
-| Normal | mestre — cria a sala com a extensão habilitada |
-| Anônima (ou outro perfil) | jogador — entra pelo link de convite |
+| 📌 **Fixar** | Guarda no caderninho mesmo sem anotação (veja abaixo) |
+| ✏️ **Edit** | Muda título, imagem, descrição e notas |
+| 👁️ **Show to Players** | Libera para os jogadores — entra na lista deles **e** abre na tela |
+| 🚫 **Retirar** | Desfaz as duas coisas: some da lista e fecha na tela deles |
+| 🔍 **Lupa** | Amplia a imagem |
+| ✕ **Fechar** | Fecha só na sua tela, sem afetar ninguém |
 
-É assim que se testa "Show to Players", a lista filtrada e o "Retirar".
+Um clique no mapa **não** fecha a janela — só o ✕ fecha. Assim você não perde o
+handout que acabou de mostrar com um clique sem querer.
 
-### Em outro aparelho (celular, notebook do amigo)
+### Descrição e notas são só suas
 
-Aqui `localhost` não serve: no celular, `localhost` é o próprio celular.
+A seção com a faixa dourada — **SÓ O MESTRE VÊ** — nunca chega ao jogador. Ele
+enxerga apenas o título e a imagem, e só dos handouts que você liberou.
 
-**Usar o IP da rede local não resolve.** O Owlbear é HTTPS e
-`http://192.168.x.x` é bloqueado como [conteúdo misto](https://developer.mozilla.org/docs/Web/Security/Mixed_content)
-— só `localhost` e `127.0.0.1` são origens confiáveis por padrão. Trocar a
-porta não muda nada: o problema é o esquema, não a porta.
+> **Até onde isso protege:** o ocultamento é da interface. O Owlbear não oferece
+> armazenamento privado, então alguém com conhecimento técnico consegue ler o
+> que está guardado na sala. É o mesmo modelo do Roll20 — bom para separar o que
+> cada um vê na mesa, não para guardar segredo de quem quer burlar.
 
-A saída é um **túnel HTTPS**:
+### O que fica salvo, e o que não fica
 
-```bash
-npm run dev          # em um terminal
-ngrok http 5173      # em outro
-```
+O caderninho guarda só o necessário, porque o Owlbear reserva um espaço pequeno
+por sala. Um handout **fica salvo** quando ele está:
 
-O ngrok devolve algo como `https://abc123.ngrok-free.app`. O link de instalação
-vira `https://abc123.ngrok-free.app/manifest.json`, e aí qualquer aparelho
-alcança.
+- **fixado** no 📌,
+- **liberado** para os jogadores, ou
+- **anotado** (descrição ou notas).
 
-> O `vite.config.ts` já aceita os domínios de ngrok, Cloudflare Tunnel e
-> localtunnel em `allowedHosts` — sem isso o Vite responde *"Blocked request.
-> This host is not allowed."* O endereço do ngrok muda a cada execução no plano
-> gratuito, então é preciso reinstalar a extensão a cada sessão.
+Fora desses casos ele some do caderninho ao ser fechado — a imagem continua na
+sua biblioteca do Owlbear, intacta, e reabrir de lá traz as anotações de volta.
 
-**Para testar a versão publicada em outro aparelho não é preciso nada disso:**
-o endereço de `pages.dev` já é HTTPS e público. O túnel só serve para exercitar
-uma alteração que ainda está na sua máquina.
+**Se você quer que uma imagem simplesmente fique na lista, clique no 📌.**
 
-## Comandos
+Quando o espaço começa a apertar, uma barra aparece no caderninho mostrando
+quanto já foi usado.
 
-| Comando | O que faz |
+### Tema claro e escuro
+
+Os três botões no topo do caderninho:
+
+| | |
 |---|---|
-| `npm run dev` | Servidor de desenvolvimento |
-| `npm run build` | Build de produção em `dist/` |
-| `npm test` | Testes |
-| `npm run lint` | ESLint |
+| 🖥️ **Automático** | Acompanha o tema do Owlbear *(padrão)* |
+| ☀️ **Claro** | Força o tema claro |
+| 🌙 **Escuro** | Força o tema escuro |
 
-O [CI](.github/workflows/ci.yml) roda os três últimos a cada push.
+A escolha vale para este aparelho e é lembrada entre sessões.
+
+### Cópia de segurança
+
+**Exportar** baixa o caderninho inteiro num arquivo JSON. **Importar** lê esse
+arquivo de volta — útil para levar o material para outra campanha.
+
+> Importar **substitui** o caderninho inteiro. A tela avisa quantos handouts
+> entram e quantos se perdem antes de você confirmar.
+
+Se o navegador bloquear o download, a extensão mostra o texto na tela para você
+copiar.
 
 ---
 
-## Estrutura
+## Dúvidas comuns
 
-```
-index.html         entrada da action (o manifest aponta para "/")
-pages/             páginas internas
-├── handout.html     a janela flutuante
-└── background.html  ouve o "mostrar", sempre vivo
-src/
-├── core/          dados, regras e integração — sem React
-│   ├── domain/      lógica pura, testável sem mocks
-│   └── owlbear/     única camada que fala com o SDK
-├── ui/            componentes React — sem SDK
-└── pages/         os scripts das três páginas
-```
+**A extensão não aparece na sala.** Ela foi instalada no perfil mas não
+habilitada na sala. Abra as configurações da sala e marque Handouts.
 
-A regra de dependência é `domain/ ← owlbear/ ← pages/ → ui/`, e ela é
-**verificada por teste** (`architecture.test.ts`), não só documentada.
+**O jogador não vê o handout que eu liberei.** Confira se o botão da janela está
+mostrando **Retirar** — se mostrar *Show to Players*, ele ainda não foi liberado.
 
-Cada camada tem seu próprio README com os detalhes:
+**Abri uma imagem e ela sumiu da lista.** É o comportamento normal de um handout
+sem 📌, sem anotação e não liberado. Clique no 📌 para mantê-lo.
 
-| Onde | O quê |
+**A imagem não carrega.** O endereço pode ter expirado ou o arquivo foi removido
+da sua biblioteca do Owlbear. Use **Edit** para escolher a imagem de novo.
+
+---
+
+## Mais
+
+| | |
 |---|---|
-| [`src/core/README.md`](src/core/README.md) | Regras de dados, segurança e desempenho |
-| [`src/ui/README.md`](src/ui/README.md) | Componentes, CSS e as armadilhas conhecidas |
-| [`PROJETO.md`](PROJETO.md) | Visão geral e estado do projeto |
-| [`documents/spec.md`](documents/spec.md) | **Fonte da verdade**: histórico e decisões |
-
----
-
-## Como funciona
-
-**A biblioteca é o gerenciador de imagens do Owlbear** — ilimitado e fora do
-nosso orçamento. A extensão guarda na metadata da sala apenas os handouts
-liberados ou anotados; o resto é podado.
-
-Isso importa porque a metadata da sala inteira precisa caber em **16 kB**,
-dividida com todas as extensões instaladas.
-
-| Situação do handout | Custo |
-|---|---|
-| Aberto da biblioteca, não liberado, sem nota | **0 B** |
-| Liberado, sem anotação | 188 B |
-| Anotado | 428 B – 1,4 kB |
-
-**O jogador vê apenas título e imagem**, e só dos handouts liberados. Descrição
-e notas nunca saem do mestre — o corte acontece na camada de dados, antes de
-qualquer componente.
-
-> **Privacidade:** o ocultamento é de interface, não criptografia. O Owlbear não
-> oferece armazenamento privado, então um jogador com DevTools consegue ler a
-> metadata da sala. É o mesmo modelo do Roll20. Detalhes em
-> [`documents/spec.md`](documents/spec.md), decisão D4.
-
----
-
-## Problemas comuns
-
-### "NetworkError when attempting to fetch resource"
-
-CORS. O **Vite 6 restringe CORS à mesma origem por padrão** (correção da
-CVE-2025-24010), e os tutoriais do Owlbear são da era do Vite 4/5, quando
-`cors: true` era o padrão.
-
-O `vite.config.ts` já libera as origens do Owlbear — e **só** elas. Para
-conferir:
-
-```bash
-curl -i -H "Origin: https://owlbear.app" http://localhost:5173/manifest.json | head -3
-# precisa aparecer: Access-Control-Allow-Origin: https://owlbear.app
-```
-
-Nunca use `cors: true`: isso deixa qualquer página que você visite ler o
-código-fonte do projeto pelo servidor de desenvolvimento.
-
-### Página em branco ao abrir `localhost:5173` direto
-
-Esperado. A extensão precisa do iframe do Owlbear para funcionar; fora dele a
-página mostra um aviso explicando o que fazer.
-
----
-
-## Publicação
-
-Publicado no **Cloudflare Pages**, em
-[handouts-owlbear-extension.pages.dev](https://handouts-owlbear-extension.pages.dev/manifest.json).
-O deploy sai a cada push na `main`; build `npm run build`, saída `dist`.
-
-**Por que um host que sirva na raiz:** o projeto usa caminhos absolutos
-(`/pages/handout.html`, `/pages/background.html`, `/logo.svg`, `/icon.svg`). O
-GitHub Pages serve em subpasta (`usuario.github.io/repo/`) e quebraria todos —
-foi o que descartou essa opção. Netlify e Vercel serviriam igualmente bem.
-
-O `public/_headers` já define a política de cache para Cloudflare Pages e
-Netlify. O ponto crítico ali é o `manifest.json` em `no-cache`: é o endereço
-que o Owlbear guarda para a extensão, e cacheado ele impediria que quem já
-instalou recebesse atualizações.
-
----
-
-## Stack
-
-React 18 · TypeScript 5.7 · Vite 8 · Vitest 5 · ESLint 10 ·
-`@owlbear-rodeo/sdk` 3.1 · CSS Modules (sem framework — roda em iframe, peso
-importa).
+| [`PROJETO.md`](PROJETO.md) | O que é o projeto e em que estado está |
+| [`documents/desenvolvimento.md`](documents/desenvolvimento.md) | Rodar, estrutura e armadilhas |
+| [`documents/spec.md`](documents/spec.md) | Decisões, histórico e bugs |
+| [`documents/design.md`](documents/design.md) | Tokens, tema e refatoração visual |
 
 ## Licença
 
