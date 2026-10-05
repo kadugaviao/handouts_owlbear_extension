@@ -86,6 +86,14 @@ export interface HandoutModalProps {
    * Esta janela é o único lugar onde ele existe antes de ser salvo.
    */
   pinned?: boolean;
+  /**
+   * O handout já fica no caderninho mesmo sem o alfinete — por ter anotação ou
+   * estar liberado?
+   *
+   * Sem este dado o botão mentia: dizia "sem isto, some quando não houver
+   * anotação" num handout que TEM anotação.
+   */
+  keptAnyway?: boolean;
   onTogglePin?: () => void | Promise<void>;
   onToggleShare?: () => void | Promise<void>;
   /** "X" — fecha só no cliente local, sem emitir evento. */
@@ -117,6 +125,7 @@ export function HandoutModal({
   maxSize,
   popoverSized = true,
   pinned = false,
+  keptAnyway = false,
   onTogglePin,
   onToggleShare,
   onClose,
@@ -341,6 +350,16 @@ export function HandoutModal({
           )}
 
           {canEdit && onTogglePin && !editing && (
+            /*
+              TRÊS ESTADOS, não dois:
+                fixado           → o mestre pediu para ficar
+                fica mesmo assim → tem anotação ou está liberado
+                não fica         → some ao fechar
+
+              O ÍCONE responde "fica?" e o PREENCHIMENTO responde "foi você que
+              pediu?". `aria-pressed` segue só o alfinete, que é o que o botão
+              de fato controla.
+            */
             <button
               type="button"
               className={`${styles.button} ${styles.iconButton} ${
@@ -351,12 +370,16 @@ export function HandoutModal({
               aria-pressed={pinned}
               title={
                 pinned
-                  ? "Fixado: fica no caderninho mesmo sem anotação"
-                  : "Fixar no caderninho (sem isto, some quando não houver anotação nem liberação)"
+                  ? keptAnyway
+                    ? "Fixado. Mesmo desafixando, ele fica enquanto tiver anotação ou estiver liberado"
+                    : "Fixado: fica no caderninho mesmo sem anotação"
+                  : keptAnyway
+                    ? "Já fica no caderninho por causa das anotações ou da liberação. Fixe para mantê-lo mesmo sem elas"
+                    : "Fixar no caderninho (sem isto, ele some quando você fechar)"
               }
               aria-label={pinned ? "Desafixar do caderninho" : "Fixar no caderninho"}
             >
-              {pinned ? (
+              {pinned || keptAnyway ? (
                 <Pin size={14} aria-hidden />
               ) : (
                 <PinOff size={14} aria-hidden />

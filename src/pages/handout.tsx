@@ -28,7 +28,7 @@ import {
   pickImageFromOwlbear,
   resizeHandoutPopover,
 } from "../core/owlbear/client";
-import { untrackedHandout } from "../core/domain/handout";
+import { keptWithoutPin, untrackedHandout } from "../core/domain/handout";
 import { sanitizeImageUrl } from "../core/domain/url";
 import "../ui/global.css";
 
@@ -286,6 +286,7 @@ function App() {
       maxSize={maxSize}
       popoverSized={popoverSized}
       pinned={handout.pinned}
+      keptAnyway={keptWithoutPin(handout)}
       onTogglePin={isGM ? handleTogglePin : undefined}
       onToggleShare={isGM ? handleToggleShare : undefined}
       // >>> OBR: fecha só aqui, sem tocar na sala.

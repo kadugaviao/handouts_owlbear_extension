@@ -7,6 +7,7 @@ import {
   isRevokePayload,
   isSharePayload,
   isWorthStoring,
+  keptWithoutPin,
   parseHandout,
   toPlayerHandout,
   untrackedHandout,
@@ -61,6 +62,38 @@ describe("isWorthStoring — fixar manda guardar", () => {
    */
   it("guarda quando o mestre fixa, mesmo sem anotação e sem liberar", () => {
     expect(isWorthStoring({ ...solto, pinned: true })).toBe(true);
+  });
+});
+
+describe("keptWithoutPin — o handout já fica por conta própria?", () => {
+  const base = {
+    imageUrl: IMG,
+    title: "Retrato",
+    description: "",
+    notes: "",
+    sharedWithPlayers: false,
+    pinned: false,
+  };
+
+  it.each([
+    ["anotado na descrição", { description: "o vilão" }],
+    ["anotado nas notas", { notes: "revelar depois" }],
+    ["liberado", { sharedWithPlayers: true }],
+  ])("%s já fica, mesmo sem o alfinete", (_caso, over) => {
+    expect(keptWithoutPin({ ...base, ...over })).toBe(true);
+  });
+
+  it("um handout solto não fica", () => {
+    expect(keptWithoutPin(base)).toBe(false);
+  });
+
+  /**
+   * É ESTA a pergunta que a interface precisa fazer. O botão de fixar mostrava
+   * "sem isto, some quando não houver anotação" até num handout COM anotação —
+   * que não ia sumir coisa nenhuma. O alfinete não pode responder por si mesmo.
+   */
+  it("ignora o próprio alfinete, senão a resposta é sempre sim", () => {
+    expect(keptWithoutPin({ ...base, pinned: true })).toBe(false);
   });
 });
 

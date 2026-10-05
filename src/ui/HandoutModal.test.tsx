@@ -145,6 +145,34 @@ describe("fixar no caderninho", () => {
     expect(onTogglePin).toHaveBeenCalledTimes(1);
   });
 
+  /**
+   * O CASO QUE O USUÁRIO APONTOU: um handout com anotação já fica no
+   * caderninho, mas o botão dizia "sem isto, some quando não houver anotação".
+   * Um aviso falso sobre um handout que não ia sumir.
+   */
+  it("não avisa que vai sumir um handout que já fica por causa das notas", () => {
+    montar({ canEdit: true, onTogglePin: vi.fn(), pinned: false, keptAnyway: true });
+    const botao = screen.getByRole("button", { name: /^fixar no caderninho$/i });
+    expect(botao).toHaveAttribute("title", expect.stringMatching(/já fica no caderninho/i));
+    expect(botao).toHaveAttribute("title", expect.not.stringMatching(/some quando/i));
+  });
+
+  it("avisa que some quando ele de fato não fica por mais nada", () => {
+    montar({ canEdit: true, onTogglePin: vi.fn(), pinned: false, keptAnyway: false });
+    expect(screen.getByRole("button", { name: /^fixar no caderninho$/i })).toHaveAttribute(
+      "title",
+      expect.stringMatching(/some quando você fechar/i),
+    );
+  });
+
+  it("desafixar avisa que ele continua ficando, quando for o caso", () => {
+    montar({ canEdit: true, onTogglePin: vi.fn(), pinned: true, keptAnyway: true });
+    expect(screen.getByRole("button", { name: /desafixar/i })).toHaveAttribute(
+      "title",
+      expect.stringMatching(/mesmo desafixando/i),
+    );
+  });
+
   /** O estado precisa ser legível sem depender de distinguir dois ícones. */
   it("o estado não depende só da cor nem do ícone", () => {
     montar({ canEdit: true, onTogglePin: vi.fn(), pinned: true });

@@ -86,6 +86,23 @@ export function isWorthStoring(handout: Handout): boolean {
   );
 }
 
+/**
+ * O handout já fica no caderninho SEM o alfinete?
+ *
+ * A interface precisa desta pergunta porque o botão de fixar tem três estados,
+ * não dois: pode estar fixado, pode não estar fixado e mesmo assim ficar (por
+ * ter anotação ou estar liberado), ou pode não ficar de jeito nenhum.
+ *
+ * Sem distinguir os dois últimos, o botão dizia "sem isto, some quando não
+ * houver anotação" num handout que TEM anotação — um aviso falso.
+ *
+ * Derivado de `isWorthStoring` de propósito: se um dia aparecer um motivo novo
+ * para guardar, esta resposta acompanha sozinha.
+ */
+export function keptWithoutPin(handout: Handout): boolean {
+  return isWorthStoring({ ...handout, pinned: false });
+}
+
 /** Reduz um handout ao que o jogador tem direito de ver. */
 export function toPlayerHandout(handout: Handout): Handout {
   return {
