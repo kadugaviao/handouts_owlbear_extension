@@ -17,6 +17,7 @@ import { createRoot } from "react-dom/client";
 import { HandoutModal } from "../ui/HandoutModal";
 import { whenOwlbearReady } from "../core/owlbear/mount";
 import { useHandouts } from "../core/owlbear/useHandouts";
+import { useTheme } from "../core/owlbear/theme";
 import {
   broadcastHideHandout,
   broadcastShowHandout,
@@ -130,6 +131,11 @@ function App() {
   // broadcast. Sanitizar aqui é a última barreira antes do `<img src>`.
   const imageUrl = sanitizeImageUrl(params.get("src"));
   const titleFromUrl = params.get("title") ?? "Sem título";
+
+  // Iframe separado do painel: precisa aplicar o tema por conta própria. O
+  // `useTheme` escuta o evento `storage`, então trocar o tema no painel
+  // alcança esta janela mesmo já aberta.
+  useTheme();
 
   const { loading, isGM, error, findByUrl, saveHandout } = useHandouts();
   const { onResize, maxSize } = usePopoverAutoSize();

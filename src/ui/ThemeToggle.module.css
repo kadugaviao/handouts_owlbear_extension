@@ -1,0 +1,53 @@
+/**
+ * Controle segmentado. Primeiro componente escrito só com tokens — nenhum hex
+ * aqui, nem nos que vierem depois (ver `documents/design.md`, §3).
+ */
+
+.group {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  background: var(--surface-raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+}
+
+.option {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* 26px de visual com 44px de área de toque: o alvo real vem do ::before
+     abaixo, sem inflar a altura da barra. */
+  width: 26px;
+  height: 22px;
+  padding: 0;
+  position: relative;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-2);
+  cursor: pointer;
+  transition:
+    background var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
+}
+
+/* Estende a área clicável sem mover nada na tela. */
+.option::before {
+  content: "";
+  position: absolute;
+  inset: -11px -9px;
+}
+
+.option:hover {
+  color: var(--text-1);
+}
+
+/* O estado selecionado NÃO é só cor: tem fundo próprio, para não depender de
+   distinguir dois tons de ícone — e o `aria-checked` carrega o mesmo dado para
+   quem não enxerga nenhum dos dois. */
+.option[aria-checked="true"] {
+  background: var(--accent);
+  color: var(--accent-ink);
+}

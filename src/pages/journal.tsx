@@ -11,6 +11,7 @@ import { createRoot } from "react-dom/client";
 import { HandoutList } from "../ui/HandoutList";
 import { whenOwlbearReady } from "../core/owlbear/mount";
 import { useHandouts } from "../core/owlbear/useHandouts";
+import { useTheme } from "../core/owlbear/theme";
 import {
   broadcastHideHandout,
   describeSdkError,
@@ -22,6 +23,9 @@ import type { Handout } from "../core/domain/handout";
 import "../ui/global.css";
 
 function App() {
+  // Aplica `data-theme` na raiz e devolve o controle para a barra.
+  const { preference: themePreference, setPreference } = useTheme();
+
   const {
     handouts,
     loading,
@@ -130,6 +134,8 @@ function App() {
       onExport={isGM ? () => downloadBackup(handouts) : undefined}
       exportText={isGM ? () => serializeBackup(handouts) : undefined}
       onImport={isGM ? handleImport : undefined}
+      themePreference={themePreference}
+      onThemePreferenceChange={setPreference}
     />
   );
 }

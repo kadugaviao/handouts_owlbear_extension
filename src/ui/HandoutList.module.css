@@ -148,6 +148,11 @@
   flex: 0 0 auto;
 }
 
+/* Separa a preferência de aparelho (tema) das ações da sala. */
+.toolbarGap {
+  flex: 1 1 auto;
+}
+
 .smallButton {
   display: inline-flex;
   align-items: center;
@@ -193,8 +198,13 @@
   width: 100%;
   min-height: 90px;
   padding: 6px;
-  border: 1px solid #cccccc;
-  border-radius: 3px;
+  /* Fundo e cor EXPLÍCITOS: era o único controle de formulário que herdava o
+     padrão do navegador, e com `color-scheme` declarado ele renderizaria
+     escuro dentro de um painel claro. */
+  background: var(--surface);
+  color: var(--text-1);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
   resize: vertical;
 }
 

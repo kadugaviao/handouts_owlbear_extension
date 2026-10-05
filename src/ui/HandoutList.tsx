@@ -21,6 +21,8 @@ import type { Handout } from "../core/domain/handout";
 import { parseBackup } from "../core/domain/backup";
 import { resizedImageUrl } from "../core/domain/url";
 import { formatBytes, type BudgetStatus } from "../core/domain/limits";
+import type { ThemePreference } from "../core/domain/theme";
+import { ThemeToggle } from "./ThemeToggle";
 
 /** Só uma confirmação pode estar aberta por vez. */
 type Confirmacao =
@@ -58,6 +60,13 @@ export interface HandoutListProps {
    * Devolve `false` quando a gravação falha.
    */
   onImport?: (handouts: Handout[]) => Promise<boolean>;
+  /**
+   * Tema: preferência atual e como mudá-la. Opcionais porque o componente não
+   * depende delas para funcionar — sem elas, o controle simplesmente não
+   * aparece.
+   */
+  themePreference?: ThemePreference;
+  onThemePreferenceChange?: (preference: ThemePreference) => void;
 }
 
 export function HandoutList({
@@ -72,6 +81,8 @@ export function HandoutList({
   onExport,
   exportText,
   onImport,
+  themePreference,
+  onThemePreferenceChange,
 }: HandoutListProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
@@ -141,9 +152,18 @@ export function HandoutList({
         )}
       </header>
 
-      {isGM && (onExport || onImport) && (
+      {(themePreference || (isGM && (onExport || onImport))) && (
         <div className={styles.toolbar}>
-          {onExport && (
+          {themePreference && onThemePreferenceChange && (
+            <ThemeToggle
+              preference={themePreference}
+              onChange={onThemePreferenceChange}
+            />
+          )}
+          {/* Empurra exportar/importar para a direita, separando a preferência
+              de aparelho das ações que mexem no caderninho da sala. */}
+          <span className={styles.toolbarGap} />
+          {isGM && onExport && (
             <button
               type="button"
               className={styles.smallButton}
@@ -154,7 +174,7 @@ export function HandoutList({
               Exportar
             </button>
           )}
-          {onImport && (
+          {isGM && onImport && (
             <>
               <button
                 type="button"
