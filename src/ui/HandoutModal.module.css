@@ -196,6 +196,13 @@
   justify-content: center;
 }
 
+/* Fixado: o mesmo acento do "liberado", porque os dois são estado ligado. */
+.button.pinned {
+  background-color: color-mix(in srgb, var(--accent) 18%, transparent);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 .iconButton.active {
   background-color: var(--surface-hover);
   border-color: var(--accent);

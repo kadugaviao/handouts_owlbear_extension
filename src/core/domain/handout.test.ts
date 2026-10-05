@@ -41,6 +41,29 @@ describe("isWorthStoring — a poda que torna a biblioteca ilimitada", () => {
   });
 });
 
+describe("isWorthStoring — fixar manda guardar", () => {
+  const solto = {
+    imageUrl: IMG,
+    title: "Retrato",
+    description: "",
+    notes: "",
+    sharedWithPlayers: false,
+    pinned: false,
+  };
+
+  it("não guarda um handout solto", () => {
+    expect(isWorthStoring(solto)).toBe(false);
+  });
+
+  /**
+   * O caso que motivou o recurso: abrir uma imagem da biblioteca, não anotar
+   * nada, e querer que ela continue no caderninho. Antes ela sumia sem aviso.
+   */
+  it("guarda quando o mestre fixa, mesmo sem anotação e sem liberar", () => {
+    expect(isWorthStoring({ ...solto, pinned: true })).toBe(true);
+  });
+});
+
 describe("toPlayerHandout — o corte de visibilidade", () => {
   it("apaga descrição e notas antes de chegar ao jogador", () => {
     const doMestre = {
@@ -49,8 +72,11 @@ describe("toPlayerHandout — o corte de visibilidade", () => {
       description: "segredo",
       notes: "mais segredo",
       sharedWithPlayers: true,
+      pinned: true,
     };
     const doJogador = toPlayerHandout(doMestre);
+    // `pinned` é organização do caderninho do mestre; não diz nada ao jogador.
+    expect(doJogador.pinned).toBe(false);
     expect(doJogador.description).toBe("");
     expect(doJogador.notes).toBe("");
     expect(doJogador.title).toBe("Goblin");
@@ -65,6 +91,7 @@ describe("visibleTo — a fronteira de privacidade", () => {
     description: "o vilão é o irmão do rei",
     notes: "revelar na sessão 8",
     sharedWithPlayers: false,
+    pinned: false,
   };
   const liberado = {
     imageUrl: "https://images.owlbear.rodeo/mapa.png",
@@ -72,6 +99,7 @@ describe("visibleTo — a fronteira de privacidade", () => {
     description: "há uma passagem secreta",
     notes: "só se rolarem 15+",
     sharedWithPlayers: true,
+    pinned: false,
   };
 
   it("o mestre vê tudo, sem corte", () => {
@@ -112,6 +140,32 @@ describe("visibleTo — a fronteira de privacidade", () => {
   });
 });
 
+describe("parseHandout — o campo novo não quebra o que já existe", () => {
+  /**
+   * Backups e metadata gravados antes do recurso não têm `pinned`. Eles
+   * precisam continuar legíveis, e o ausente significa "não fixado".
+   */
+  it("um registro sem `pinned` é lido como não fixado", () => {
+    const antigo = parseHandout({
+      imageUrl: IMG,
+      title: "De antes",
+      description: "",
+      notes: "",
+      sharedWithPlayers: true,
+    });
+    expect(antigo?.pinned).toBe(false);
+  });
+
+  it.each([null, "sim", 1, {}])("recusa %s como valor de pinned", (valor) => {
+    const h = parseHandout({ imageUrl: IMG, pinned: valor });
+    expect(h?.pinned).toBe(false);
+  });
+
+  it("preserva o fixado", () => {
+    expect(parseHandout({ imageUrl: IMG, pinned: true })?.pinned).toBe(true);
+  });
+});
+
 describe("parseHandout — tolerância a dados antigos e a JSON importado", () => {
   it("recusa registro sem imagem", () => {
     expect(parseHandout({ title: "sem imagem" })).toBeNull();
@@ -127,6 +181,7 @@ describe("parseHandout — tolerância a dados antigos e a JSON importado", () =
       description: "",
       notes: "",
       sharedWithPlayers: false,
+      pinned: false,
     });
   });
 });

@@ -251,6 +251,17 @@ function App() {
     }
   }
 
+  /**
+   * Fixar: guarda o handout no caderninho mesmo sem anotação e sem liberar.
+   *
+   * Desafixar um handout que também não está liberado nem anotado faz a poda
+   * agir e o registro some — que é exatamente o que "desafixar" significa.
+   */
+  async function handleTogglePin() {
+    setActionError(null);
+    await saveHandout({ ...handout, pinned: !handout.pinned });
+  }
+
   /** O seletor de imagens do Owlbear é uma chamada ao SDK: pode recusar. */
   async function handlePickImage() {
     setActionError(null);
@@ -274,6 +285,8 @@ function App() {
       onResize={onResize}
       maxSize={maxSize}
       popoverSized={popoverSized}
+      pinned={handout.pinned}
+      onTogglePin={isGM ? handleTogglePin : undefined}
       onToggleShare={isGM ? handleToggleShare : undefined}
       // >>> OBR: fecha só aqui, sem tocar na sala.
       onClose={handleClose}

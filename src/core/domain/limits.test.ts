@@ -16,6 +16,7 @@ function handouts(quantidade: number, tamanhoDoTexto = 0): Handout[] {
     description: "x".repeat(tamanhoDoTexto),
     notes: "y".repeat(tamanhoDoTexto),
     sharedWithPlayers: true,
+    pinned: false,
   }));
 }
 

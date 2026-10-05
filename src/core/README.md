@@ -27,21 +27,34 @@ Sem SDK e sem React, então testa sem nenhum mock.
 
 | Arquivo | O que faz |
 |---|---|
-| `handout.ts` | O modelo de dados e as duas regras que sustentam o projeto: `isWorthStoring` (a poda) e `toPlayerHandout` (o corte de visibilidade) |
+| `handout.ts` | O modelo de dados e as regras que sustentam o projeto: `isWorthStoring` (a poda), `visibleTo` (a fronteira de privacidade) e `toPlayerHandout` (o corte de campos) |
 | `limits.ts` | Orçamento dos 16 kB de metadata da sala |
 | `backup.ts` | Serializar e ler o JSON de backup |
 | `url.ts` | Validação de esquema de URL (barreira contra `javascript:` e `data:`) e `resizedImageUrl`, que pede ao CDN do Owlbear a imagem já no tamanho exibido |
 
-### As duas regras que importam
+### As regras que importam
 
-**`isWorthStoring`** — um handout que não está liberado e não tem anotação já é
+**`isWorthStoring`** — um handout que não está fixado, liberado nem anotado já é
 integralmente descrito pela biblioteca de imagens do Owlbear. Guardar de novo
 seria desperdiçar orçamento. Por isso ele é podado, e por isso a biblioteca é
 efetivamente ilimitada.
 
-**`toPlayerHandout`** — zera `description` e `notes`. É aplicado em
-`useHandouts` antes de qualquer componente ver os dados, então um cliente de
-jogador nunca chega a segurar esses campos.
+O campo `pinned` existe para recusar essa poda. "Abri uma imagem e ela sumiu" é
+a pior surpresa possível num caderninho, e antes não havia como evitá-la sem
+escrever uma anotação qualquer.
+
+**`visibleTo`** — descarta o que não foi liberado E poda os campos do que sobra.
+As duas operações só valem juntas: `toPlayerHandout` sozinho limpa o conteúdo,
+mas um handout anotado e não liberado ainda apareceria na lista do jogador com
+o título à mostra.
+
+Mora em `domain/` porque viveu dentro de um `useMemo` onde nenhum teste a
+alcançava — apagar o filtro mantinha a suíte inteira verde enquanto as anotações
+do mestre vazavam (B24).
+
+**`toPlayerHandout`** — zera `description`, `notes` e `pinned`. Aplicado antes
+de qualquer componente ver os dados, então um cliente de jogador nunca chega a
+segurar esses campos.
 
 ## `owlbear/` — a única camada que fala com o SDK
 

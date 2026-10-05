@@ -11,6 +11,7 @@
  */
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom/vitest";
 import { HandoutModal, type HandoutModalProps } from "./HandoutModal";
 import styles from "./HandoutModal.module.css";
@@ -105,5 +106,50 @@ describe("a seção do mestre é exclusiva dele", () => {
     montar({ canEdit: false, onToggleShare: vi.fn(), onSave: vi.fn() });
     expect(screen.queryByRole("button", { name: /edit/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /liberar|retirar|show/i })).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * FIXAR.
+ *
+ * Nasceu de um relato: "só consigo salvar a imagem se tiver alguma anotação,
+ * senão ele só some". Era o comportamento projetado — a poda que torna a
+ * biblioteca ilimitada —, mas sem nenhuma forma de recusá-la.
+ *
+ * O botão mora AQUI e não na lista por um motivo estrutural: um handout ainda
+ * não fixado, anotado nem liberado não aparece na lista. Esta janela é o único
+ * lugar onde ele existe antes de ser salvo.
+ */
+describe("fixar no caderninho", () => {
+  it("o jogador não tem o botão", () => {
+    montar({ canEdit: false, onTogglePin: vi.fn() });
+    expect(screen.queryByRole("button", { name: /fixar/i })).not.toBeInTheDocument();
+  });
+
+  it("o mestre vê 'Fixar' quando ainda não está fixado", () => {
+    montar({ canEdit: true, onTogglePin: vi.fn(), pinned: false });
+    const botao = screen.getByRole("button", { name: /^fixar no caderninho$/i });
+    expect(botao).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("o mestre vê 'Desafixar' quando já está fixado", () => {
+    montar({ canEdit: true, onTogglePin: vi.fn(), pinned: true });
+    const botao = screen.getByRole("button", { name: /desafixar/i });
+    expect(botao).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("clicar avisa quem controla o estado", async () => {
+    const onTogglePin = vi.fn();
+    montar({ canEdit: true, onTogglePin, pinned: false });
+    await userEvent.click(screen.getByRole("button", { name: /^fixar no caderninho$/i }));
+    expect(onTogglePin).toHaveBeenCalledTimes(1);
+  });
+
+  /** O estado precisa ser legível sem depender de distinguir dois ícones. */
+  it("o estado não depende só da cor nem do ícone", () => {
+    montar({ canEdit: true, onTogglePin: vi.fn(), pinned: true });
+    const botao = screen.getByRole("button", { name: /desafixar/i });
+    expect(botao).toHaveAttribute("aria-pressed", "true");
+    expect(botao).toHaveAttribute("title", expect.stringMatching(/fixado/i));
   });
 });

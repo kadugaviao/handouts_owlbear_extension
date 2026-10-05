@@ -10,11 +10,12 @@
  *
  * A METADATA DA SALA guarda só o que a biblioteca não sabe guardar, e só para
  * os handouts que realmente precisam:
- *   - os que estão LIBERADOS para os jogadores agora, e
- *   - os que o mestre ANOTOU (descrição ou notas).
+ *   - os que estão LIBERADOS para os jogadores agora,
+ *   - os que o mestre ANOTOU (descrição ou notas), e
+ *   - os que o mestre FIXOU de propósito.
  *
  * Um retrato que o mestre mostra e nunca anota não ocupa nada de forma
- * permanente. Ver `isWorthStoring`.
+ * permanente — a menos que ele peça. Ver `isWorthStoring`.
  *
  * IDENTIDADE
  * ----------
@@ -44,6 +45,14 @@ export interface Handout {
   notes: string;
   /** Liberado: aparece na lista dos jogadores. */
   sharedWithPlayers: boolean;
+  /**
+   * Fixado pelo mestre: fica no caderninho mesmo sem anotação e sem liberar.
+   *
+   * Existe porque "abri uma imagem e ela sumiu" é a pior surpresa possível num
+   * caderninho. A poda continua sendo o padrão — o que muda é haver uma forma
+   * explícita de recusá-la.
+   */
+  pinned: boolean;
 }
 
 /**
@@ -58,6 +67,7 @@ export function untrackedHandout(imageUrl: string, title: string): Handout {
     description: "",
     notes: "",
     sharedWithPlayers: false,
+    pinned: false,
   };
 }
 
@@ -69,6 +79,7 @@ export function untrackedHandout(imageUrl: string, title: string): Handout {
  */
 export function isWorthStoring(handout: Handout): boolean {
   return (
+    handout.pinned ||
     handout.sharedWithPlayers ||
     handout.description.trim() !== "" ||
     handout.notes.trim() !== ""
@@ -83,6 +94,8 @@ export function toPlayerHandout(handout: Handout): Handout {
     description: "", // nunca chega ao jogador
     notes: "", // nunca chega ao jogador
     sharedWithPlayers: true,
+    // Organização do caderninho do mestre: não diz nada ao jogador.
+    pinned: false,
   };
 }
 
@@ -124,6 +137,8 @@ export function parseHandout(raw: unknown): Handout | null {
     description: typeof h.description === "string" ? h.description : "",
     notes: typeof h.notes === "string" ? h.notes : "",
     sharedWithPlayers: h.sharedWithPlayers === true,
+    // Registros gravados antes deste campo existir leem como "não fixado".
+    pinned: h.pinned === true,
   };
 }
 

@@ -11,6 +11,8 @@
 import { useEffect, useRef, useState } from "react";
 import {
   Check,
+  Pin,
+  PinOff,
   EyeOff,
   FileText,
   Lock,
@@ -76,6 +78,15 @@ export interface HandoutModalProps {
    */
   popoverSized?: boolean;
   /** Alterna liberado/retirado. Ausente = botão escondido (cliente jogador). */
+  /**
+   * Fixar/desafixar no caderninho. Ausente para quem não é o mestre.
+   *
+   * MORA AQUI, e não na lista, por um motivo estrutural: um handout que ainda
+   * não foi fixado, anotado nem liberado NÃO APARECE na lista — ele é podado.
+   * Esta janela é o único lugar onde ele existe antes de ser salvo.
+   */
+  pinned?: boolean;
+  onTogglePin?: () => void | Promise<void>;
   onToggleShare?: () => void | Promise<void>;
   /** "X" — fecha só no cliente local, sem emitir evento. */
   onClose: () => void | Promise<void>;
@@ -105,6 +116,8 @@ export function HandoutModal({
   onResize,
   maxSize,
   popoverSized = true,
+  pinned = false,
+  onTogglePin,
   onToggleShare,
   onClose,
   onSave,
@@ -227,6 +240,15 @@ export function HandoutModal({
     }
   }
 
+  async function handleTogglePin() {
+    setBusy(true);
+    try {
+      await onTogglePin?.();
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function handleToggleShare() {
     setBusy(true);
     try {
@@ -315,6 +337,30 @@ export function HandoutModal({
                 <Users size={14} aria-hidden />
               )}
               {sharedWithPlayers ? "Retirar" : "Show to Players"}
+            </button>
+          )}
+
+          {canEdit && onTogglePin && !editing && (
+            <button
+              type="button"
+              className={`${styles.button} ${styles.iconButton} ${
+                pinned ? styles.pinned : ""
+              }`}
+              onClick={() => void handleTogglePin()}
+              disabled={busy}
+              aria-pressed={pinned}
+              title={
+                pinned
+                  ? "Fixado: fica no caderninho mesmo sem anotação"
+                  : "Fixar no caderninho (sem isto, some quando não houver anotação nem liberação)"
+              }
+              aria-label={pinned ? "Desafixar do caderninho" : "Fixar no caderninho"}
+            >
+              {pinned ? (
+                <Pin size={14} aria-hidden />
+              ) : (
+                <PinOff size={14} aria-hidden />
+              )}
             </button>
           )}
 

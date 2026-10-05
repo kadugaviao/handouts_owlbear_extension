@@ -8,6 +8,7 @@ const handout: Handout = {
   description: "verde",
   notes: "morde",
   sharedWithPlayers: true,
+  pinned: false,
 };
 
 describe("ida e volta", () => {

@@ -40,6 +40,7 @@ function handout(over: Partial<Handout> = {}): Handout {
     description: "",
     notes: "",
     sharedWithPlayers: false,
+    pinned: false,
     ...over,
   };
 }
