@@ -54,6 +54,16 @@ const MAX_SCREEN_FRACTION = 0.8;
 function usePopoverAutoSize() {
   const lastSent = useRef({ width: 0, height: 0 });
   const [maxSize, setMaxSize] = useState<{ width: number; height: number }>();
+  /**
+   * O popover já está no tamanho do card?
+   *
+   * É este o sinal que libera o card a aparecer — não "a imagem carregou". A
+   * primeira versão usava o carregamento da imagem, e nesse instante o iframe
+   * ainda está no tamanho inicial: o card surgia dentro de uma moldura grande e
+   * a moldura encolhia em volta um instante depois. "Alarga e volta", nas
+   * palavras de quem usou.
+   */
+  const [popoverSized, setPopoverSized] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -115,14 +125,21 @@ function usePopoverAutoSize() {
         Math.abs(next.width - last.width) < 4 &&
         Math.abs(next.height - last.height) < 4
       ) {
+        // Já está do tamanho certo: nada a enviar, e nada a esperar.
+        setPopoverSized(true);
         return;
       }
       lastSent.current = next;
-      void resizeHandoutPopover(next.width, next.height);
+      // Só depois que o Owlbear confirma é que o iframe tem o tamanho final.
+      // Em caso de recusa, revelar mesmo assim: um card escondido para sempre
+      // seria pior que um card que aparece com a moldura errada.
+      void resizeHandoutPopover(next.width, next.height).finally(() =>
+        setPopoverSized(true),
+      );
     });
-  }, []);
+  }, [setPopoverSized]);
 
-  return { onResize, maxSize };
+  return { onResize, maxSize, popoverSized };
 }
 
 function App() {
@@ -138,7 +155,7 @@ function App() {
   useTheme();
 
   const { loading, isGM, error, findByUrl, saveHandout } = useHandouts();
-  const { onResize, maxSize } = usePopoverAutoSize();
+  const { onResize, maxSize, popoverSized } = usePopoverAutoSize();
 
   // Falha de uma AÇÃO desta janela, separada do `error` do hook (que é sobre
   // ler/gravar a metadata). Sem isto, toda chamada ao SDK daqui falhava calada
@@ -181,6 +198,7 @@ function App() {
         canEdit={false}
         onResize={onResize}
         maxSize={maxSize}
+        popoverSized={popoverSized}
         writeError={actionError}
         onClose={handleClose}
       />
@@ -255,6 +273,7 @@ function App() {
       writeError={actionError ?? error}
       onResize={onResize}
       maxSize={maxSize}
+      popoverSized={popoverSized}
       onToggleShare={isGM ? handleToggleShare : undefined}
       // >>> OBR: fecha só aqui, sem tocar na sala.
       onClose={handleClose}

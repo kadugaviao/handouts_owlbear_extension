@@ -68,6 +68,13 @@ export interface HandoutModalProps {
    * partir deste card — realimentação.
    */
   maxSize?: { width: number; height: number };
+  /**
+   * O popover já foi ajustado ao card? É o que libera a entrada.
+   *
+   * Opcional e `true` por omissão: quem renderiza o modal sem controlar o
+   * popover (os testes, por exemplo) não deve ficar com um card invisível.
+   */
+  popoverSized?: boolean;
   /** Alterna liberado/retirado. Ausente = botão escondido (cliente jogador). */
   onToggleShare?: () => void | Promise<void>;
   /** "X" — fecha só no cliente local, sem emitir evento. */
@@ -97,6 +104,7 @@ export function HandoutModal({
   writeError,
   onResize,
   maxSize,
+  popoverSized = true,
   onToggleShare,
   onClose,
   onSave,
@@ -124,8 +132,19 @@ export function HandoutModal({
    * Guardar a URL junto do estado é o que permite detectar troca de imagem
    * durante a renderização, sem `useEffect`.
    */
-  const [imageState, setImageState] = useState({
-    url: "",
+  const [imageState, setImageState] = useState<{
+    /**
+     * `undefined` significa "ainda não sincronizado com a prop".
+     *
+     * Era `""`, e aí um handout SEM imagem (`shownUrl` também vazio) nunca
+     * entrava no ajuste durante a renderização: `settled` ficava em `false`
+     * para sempre e o card não chegava a aparecer. O sentinela garante que a
+     * primeira renderização sempre sincroniza.
+     */
+    url?: string;
+    failed: boolean;
+    settled: boolean;
+  }>({
     failed: false,
     // Enquanto a imagem não resolve, o card tem só a altura do cabeçalho.
     // Avisar o tamanho nesse instante encolheria o popover a um talo, e ele
@@ -234,12 +253,12 @@ export function HandoutModal({
   return (
     <div
       ref={modalRef}
-      /* `settled` é o mesmo sinal que libera o redimensionamento: o card só
-         aparece quando já está no tamanho final, em vez de piscar vazio,
-         crescer e assentar. Serve também quando não há imagem — `settled`
-         é marcado nos três caminhos (carregou, falhou, não existe). */
+      /* DOIS sinais, não um. `settled` diz que a imagem resolveu (carregou,
+         falhou ou não existe); `popoverSized` diz que o Owlbear já ajustou o
+         iframe ao card. Revelar só com o primeiro fazia o card surgir dentro
+         de uma moldura grande que encolhia em volta logo depois. */
       className={`${styles.modal} ${zoomed ? styles.zoomed : ""} ${
-        imageState.settled ? styles.ready : ""
+        imageState.settled && popoverSized ? styles.ready : ""
       }`}
       style={
         maxSize
