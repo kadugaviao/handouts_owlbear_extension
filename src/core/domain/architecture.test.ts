@@ -17,12 +17,30 @@ const SRC = join(process.cwd(), "src");
 /** Lê os arquivos de código de uma pasta (sem testes, sem CSS, sem markdown). */
 function sourceFiles(dir: string): { name: string; content: string }[] {
   return readdirSync(join(SRC, dir))
-    .filter((f: string) => /\.tsx?$/.test(f) && !f.endsWith(".test.ts"))
+    // `.tsx?` nos dois lados: o filtro antigo só excluía `.test.ts`, e o
+    // primeiro teste de interface (`.test.tsx`) passou a ser auditado como se
+    // fosse produção.
+    .filter((f: string) => /\.tsx?$/.test(f) && !/\.test\.tsx?$/.test(f))
     .map((name: string) => ({
       name: `${dir}/${name}`,
       content: readFileSync(join(SRC, dir, name), "utf8"),
     }));
 }
+
+/**
+ * O filtro de `sourceFiles` existe para auditar PRODUÇÃO. Um arquivo de teste
+ * que escapasse dele seria verificado contra regras que não valem para ele — e
+ * pior, passaria despercebido enquanto passasse por acaso.
+ */
+describe("sourceFiles audita só código de produção", () => {
+  it.each(["core/domain", "core/owlbear", "pages", "ui"])(
+    "%s não traz arquivo de teste",
+    (dir) => {
+      const nomes = sourceFiles(dir).map((f) => f.name);
+      expect(nomes.filter((n) => /\.test\.tsx?$/.test(n))).toEqual([]);
+    },
+  );
+});
 
 describe("domain/ é puro", () => {
   const files = sourceFiles("core/domain");
