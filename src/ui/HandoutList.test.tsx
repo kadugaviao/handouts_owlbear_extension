@@ -119,6 +119,36 @@ describe("o jogador não vê os controles do mestre", () => {
 });
 
 /**
+ * MUTAÇÃO: devolver o selo para fora do `.itemButton`, ao lado da lixeira.
+ *
+ * Bug relatado em uso real: o selo de "liberado" tinha virado um círculo do
+ * mesmo tamanho e formato dos botões de ícone, encostado neles. As pessoas
+ * clicavam e nada acontecia — afordância mentindo. Estado não pode se parecer
+ * com ação.
+ */
+describe("o selo de liberado é estado, não controle", () => {
+  it("não existe nenhum botão chamado Liberado", () => {
+    montar({ handouts: [handout({ sharedWithPlayers: true })] });
+    expect(screen.queryByRole("button", { name: /^liberado$/i })).not.toBeInTheDocument();
+  });
+
+  it("o selo mora dentro do botão que abre o handout, não ao lado da lixeira", () => {
+    montar({ handouts: [handout({ sharedWithPlayers: true })] });
+    const selo = screen.getByTitle(/liberado para os jogadores/i);
+    const abrir = screen.getByRole("button", { name: /^mapa da masmorra/i });
+    expect(abrir).toContainElement(selo);
+  });
+
+  it("clicar no selo abre o handout, como qualquer parte da linha", async () => {
+    const { onOpen, props } = montar({
+      handouts: [handout({ sharedWithPlayers: true })],
+    });
+    await userEvent.click(screen.getByTitle(/liberado para os jogadores/i));
+    expect(onOpen).toHaveBeenCalledWith(props.handouts[0]);
+  });
+});
+
+/**
  * MUTAÇÃO: chamar `onRemove(handout)` direto no `onClick` da lixeira, sem
  * passar pela confirmação.
  *

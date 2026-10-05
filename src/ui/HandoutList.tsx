@@ -394,17 +394,24 @@ export function HandoutList({
                 <span className={styles.itemTitle}>
                   {handout.title || "Sem título"}
                 </span>
-              </button>
 
-              {/* Ponto verde: este handout está na lista dos jogadores. */}
-              {isGM && handout.sharedWithPlayers && (
-                <span
-                  className={styles.sharedDot}
-                  title="Liberado para os jogadores"
-                >
-                  <Eye size={14} aria-hidden />
-                </span>
-              )}
+                {/*
+                  Selo de ESTADO, não de ação — "este handout está na lista dos
+                  jogadores". Fica junto do conteúdo de propósito: quando ele
+                  morava à direita, ao lado da lixeira, lia-se como o segundo
+                  botão de um par, e as pessoas clicavam esperando resposta.
+                  Quem libera e retira é o botão único da janela (D7).
+                */}
+                {isGM && handout.sharedWithPlayers && (
+                  <span
+                    className={styles.sharedDot}
+                    title="Liberado para os jogadores"
+                  >
+                    <Eye size={12} aria-hidden />
+                    Liberado
+                  </span>
+                )}
+              </button>
 
               {isGM && (
                 <button

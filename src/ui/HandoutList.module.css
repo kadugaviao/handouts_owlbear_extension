@@ -126,18 +126,39 @@
  * linha. Como selo, ele vira estado — e o estado é a informação mais
  * importante de um item do caderninho.
  */
+/**
+ * Selo de ESTADO, nunca de ação.
+ *
+ * A primeira versão era um círculo de 22px com um ícone — do mesmo tamanho e
+ * formato dos botões de ícone da linha, e encostado neles. Parecia um botão,
+ * as pessoas clicavam, e nada acontecia: afordância mentindo.
+ *
+ * O conserto é de forma E de posição. Pílula alongada com texto (ninguém
+ * confunde um rótulo com um botão de ícone) e dentro do conteúdo do item, não
+ * no agrupamento de ações à direita.
+ */
 .sharedDot {
   flex: 0 0 auto;
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
+  gap: 3px;
+  padding: 2px 7px 2px 5px;
   border-radius: var(--radius-pill);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  letter-spacing: 0.02em;
   color: var(--accent);
   /* `color-mix` mantém o selo ligado ao acento do tema: um valor fixo
      divergiria do verde no dia em que a paleta mudasse. */
-  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  /* Cursor do item, não de controle: reforça que não é alvo próprio. */
+  cursor: inherit;
+}
+
+/* O título cede espaço ao selo antes de truncar — o estado é mais curto e mais
+   importante que o fim de um título longo. */
+.itemTitle {
+  flex: 0 1 auto;
 }
 
 /* ---------- Botões ---------- */
